@@ -1,12 +1,17 @@
-import express from 'express'
+import express from "express";
+import appRoutes from "./routes/index-routes";
+import bodyParser from "body-parser";
+import { errorHandler } from "./middlewares/error";
 
 const app = express();
 
-app.get("/", (req, res) => {
-        res.send("CP2 OK");
-})
+app.use(bodyParser.urlencoded());
+app.use(bodyParser.json());
 
-app.listen(3000, () => {
-        console.log("CP2 running on port 3000");
+app.use("/api/v1", appRoutes);
 
-})
+app.use(errorHandler);
+
+app.listen(5000, () => {
+        console.log("CP2 running on port 5000...");
+});

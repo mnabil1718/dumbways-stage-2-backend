@@ -1,0 +1,16 @@
+import { Request, Response, NextFunction } from "express";
+import { z, ZodError } from "zod";
+import { StatusCodes } from "http-status-codes";
+import { formatZodErrorsAsObject } from "../utils/validation";
+
+export function validate<T extends z.ZodTypeAny>(schema: T) {
+        return (req: Request, res: Response, next: NextFunction) => {
+                const result = schema.safeParse(req.body);
+                if (!result.success) {
+                        const msgs = formatZodErrorsAsObject(result.error);
+                        return res.status(StatusCodes.BAD_REQUEST).json({ errors: msgs });
+                } else {
+                        next();
+                }
+        }
+}

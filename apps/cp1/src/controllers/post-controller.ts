@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { slugify } from "../utils/slugify";
+import { slugify } from "@repo/shared";
 import { CreatePost, getPostById, insertPost, getPosts as getAllPosts, getPostBySlug, deletePostById } from "../models/post-model";
 import { StatusCodes } from "http-status-codes";
 

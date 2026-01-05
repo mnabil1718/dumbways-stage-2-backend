@@ -4,11 +4,13 @@
   "description": "Set of apps for dumbways fullstack bootcamp stage 2. Using expressjs and typescript, and npm workspaces",
   "private": true,
   "workspaces": [
-    "apps/*"
+    "apps/*",
+    "packages/*"
   ],
   "scripts": {
     "dev:cp1": "npm run dev --workspace=apps/cp1",
-    "dev:cp2": "npm run dev --workspace=apps/cp2"
+    "dev:cp2": "npm run dev --workspace=apps/cp2",
+    "build:shared": "npm run build --workspace=packages/shared"
   },
   "keywords": [
     "typescript",
@@ -19,6 +21,7 @@
   "type": "module",
   "dependencies": {
     "body-parser": "^2.2.1",
-    "http-status-codes": "^2.3.0"
+    "http-status-codes": "^2.3.0",
+    "zod": "^4.3.5"
   }
 }
