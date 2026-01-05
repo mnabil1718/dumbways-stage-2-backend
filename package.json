@@ -1,0 +1,20 @@
+{
+  "name": "dw-2",
+  "version": "1.0.0",
+  "description": "Set of apps for dumbways fullstack bootcamp stage 2. Using expressjs and typescript, and npm workspaces",
+  "private": true,
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev:cp1": "npm run dev --workspace=apps/cp1",
+    "dev:cp2": "npm run dev --workspace=apps/cp2"
+  },
+  "keywords": [
+    "typescript",
+    "expressjs"
+  ],
+  "author": "mnabil1718",
+  "license": "ISC",
+  "type": "commonjs"
+}
