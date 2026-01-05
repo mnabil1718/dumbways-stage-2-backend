@@ -37,6 +37,17 @@ export type UpdateOrderItem = z.infer<typeof UpdateOrderItemSchema>;
 
 export const order_items: OrderItem[] = [];
 
+
+export function mapOrderItemToResponse(origin: OrderItem): OrderItemResponse {
+        return {
+                product_id: origin.product_id,
+                product_name: origin.product_name,
+                qty: origin.qty,
+                price: Math.round(100 * origin.price) / 100,
+                subtotal: Math.round(100 * origin.subtotal) / 100,
+        }
+}
+
 export function insertOrderItems(orderId: number, p: Product, data: CreateOrderItem): OrderItem {
         const orderItemId = calcLastId(order_items);
         const subtotal = data.qty * p.price;
@@ -55,5 +66,6 @@ export function insertOrderItems(orderId: number, p: Product, data: CreateOrderI
 }
 
 export function getOrderItemsByOrderId(orderId: number): OrderItemResponse[] {
-        return order_items.filter(item => item.order_id === orderId);
+        return order_items.filter(item => item.order_id === orderId).map((item) => mapOrderItemToResponse(item));
 }
+

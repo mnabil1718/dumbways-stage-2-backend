@@ -19,7 +19,7 @@ export const CreateShippingAddressSchema = z.object({
         province: z.string().min(1),
         postal_code: z.string().min(1),
         country: z.string().min(1),
-        phone: z.string().regex(/_phone$/),
+        phone: z.e164(), // NOTE: Phone Number E164 standard
 });
 
 export type CreateShippingAddress = z.infer<typeof CreateShippingAddressSchema>;
@@ -35,6 +35,19 @@ export type UpdateShippingAddress = z.infer<typeof UpdateShippingAddressSchema>;
 // in-mem store
 
 export const shipping_addresses: ShippingAddress[] = [];
+
+export function mapShippingAddressToResponse(origin: ShippingAddress): ShippingAddressResponse {
+        return {
+                recipient_name: origin.recipient_name,
+                street: origin.street,
+                city: origin.city,
+                province: origin.province,
+                postal_code: origin.postal_code,
+                country: origin.country,
+                phone: origin.phone,
+        };
+
+}
 
 export function insertShippingAddress(data: CreateShippingAddress): ShippingAddress {
 
@@ -56,5 +69,5 @@ export function insertShippingAddress(data: CreateShippingAddress): ShippingAddr
 export function getShippingAddressById(id: number): ShippingAddressResponse {
         const addr = shipping_addresses.find((addr) => addr.id === id);
         if (!addr) throw new NotFoundError("Shipping address not found");
-        return addr;
+        return mapShippingAddressToResponse(addr);
 }
