@@ -10,10 +10,10 @@
 ## Project Structure
 
 This repository consists of 2 different projects (unrelated) but united in 1 repo using npm workspaces. 
-- CP1: Blog backend project
-- CP2: Mini store backend project
+- apps/CP1: Blog backend project
+- apps/CP2: Mini store backend project
 
-Branches organized into the following format `day-{num}`, which contains both `CP1` and `CP2` folders.
+Branches organized into the following format `day-{num}`, which contains both `apps/CP1` and `apps/CP2` folders.
 
 ## Running locally
 ```bash
