@@ -16,5 +16,5 @@
   ],
   "author": "mnabil1718",
   "license": "ISC",
-  "type": "commonjs"
+  "type": "module"
 }
