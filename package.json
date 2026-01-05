@@ -16,5 +16,9 @@
   ],
   "author": "mnabil1718",
   "license": "ISC",
-  "type": "module"
+  "type": "module",
+  "dependencies": {
+    "body-parser": "^2.2.1",
+    "http-status-codes": "^2.3.0"
+  }
 }
