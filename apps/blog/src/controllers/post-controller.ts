@@ -1,57 +1,65 @@
 import { Request, Response } from "express";
-import { slugify } from "@repo/shared";
-import { CreatePost, getPostById, insertPost, getPosts as getAllPosts, getPostBySlug, deletePostById } from "../models/post-model";
+import { ok, slugify } from "@repo/shared";
+import { CreatePost, getPostById, insertPost, getAllPosts, getPostBySlug, deletePostById, Post, updatePostById, PostResponse, UpdatePost, checkPostIDExists } from "../models/post-model";
 import { StatusCodes } from "http-status-codes";
 
-export const postPosts = (req: Request, res: Response) => {
+export const postPosts = async (req: Request, res: Response) => {
 
-        const { title, content } = req.body;
+        const { title, content, published } = req.body;
 
         const slug: string = slugify(title);
+        const authorId = 1;  // dummy, later will be retrieved from auth info or token
         const createPost: CreatePost = {
                 title,
                 content,
                 slug,
+                authorId,
+                published,
         };
 
-        const post = insertPost(createPost);
-        res.status(StatusCodes.CREATED).json(post);
+        const post = await insertPost(createPost);
+        res.status(StatusCodes.CREATED).json(ok("Post created successfully", post));
 }
 
-export const getPosts = (req: Request, res: Response) => {
-        const posts = getAllPosts();
-        res.status(StatusCodes.OK).json(posts);
-}
-
-export const getPostsById = (req: Request, res: Response) => {
+export const putPosts = async (req: Request, res: Response) => {
         const { id } = req.params;
-        const post = getPostById(Number(id));
+        const { title, content, published } = req.body;
 
-        if (!post) {
-                return res.status(StatusCodes.NOT_FOUND).json({ message: "Post not found" });
-        }
+        const p: PostResponse = await getPostById(Number(id));
+        const update: UpdatePost = {
+                id: p.id,
+                title: title ?? p.title,
+                content: content ?? p.content,
+                published: published ?? p.published,
+        };
 
-        res.status(StatusCodes.OK).json(post);
+        const post = await updatePostById(update);
+        res.status(StatusCodes.OK).json(ok("Post updated successfully", post));
 }
 
+export const getPosts = async (req: Request, res: Response) => {
+        const posts = await getAllPosts();
+        res.status(StatusCodes.OK).json(ok("Posts fetched successfully", posts));
+}
 
-export const getPostsBySlug = (req: Request, res: Response) => {
+export const getPostsById = async (req: Request, res: Response) => {
+        const { id } = req.params;
+        const post = await getPostById(Number(id));
+
+        res.status(StatusCodes.OK).json(ok("Post fetched successfully", post));
+}
+
+export const getPostsBySlug = async (req: Request, res: Response) => {
         const { slug } = req.params;
-        const post = getPostBySlug(slug);
+        const post = await getPostBySlug(slug);
 
-        if (!post) {
-                return res.status(StatusCodes.NOT_FOUND).json({ message: "Post not found" });
-        }
-
-        res.status(StatusCodes.OK).json(post);
+        res.status(StatusCodes.OK).json(ok("Post fetched successfully", post));
 }
 
-export const deletePostsById = (req: Request, res: Response) => {
+export const deletePostsById = async (req: Request, res: Response) => {
         const { id } = req.params;
-        const post = deletePostById(Number(id));
-        if (!post) {
-                return res.status(StatusCodes.NOT_FOUND).json({ message: "Post not found" });
-        }
 
-        res.status(StatusCodes.OK).json(post);
+        await checkPostIDExists(Number(id));
+        const post = await deletePostById(Number(id));
+        res.status(StatusCodes.OK).json(ok("Post deleted successfully", post));
 }
