@@ -8,8 +8,8 @@
     "packages/*"
   ],
   "scripts": {
-    "dev:cp1": "npm run dev --workspace=apps/cp1",
-    "dev:cp2": "npm run dev --workspace=apps/cp2",
+    "dev:blog": "npm run dev --workspace=apps/blog",
+    "dev:store": "npm run dev --workspace=apps/store",
     "build:shared": "npm run build --workspace=packages/shared"
   },
   "keywords": [
