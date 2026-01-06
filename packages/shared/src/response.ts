@@ -11,8 +11,8 @@ export type APIResponse<T> = |
 
 export const ok = <T>(message: string, data?: T): APIResponse<T> => ({
         success: true,
-        data,
         message,
+        data,
 });
 
 export const fail = (message: string, errors?: Record<string, string>): APIResponse<never> => ({
