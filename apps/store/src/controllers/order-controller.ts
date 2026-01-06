@@ -4,14 +4,14 @@ import { StatusCodes } from "http-status-codes";
 import { ok } from "@repo/shared";
 
 
-export const postOrders = (req: Request, res: Response) => {
-        const order: OrderResponse = insertOrder(req.body);
+export const postOrders = async (req: Request, res: Response) => {
+        const order: OrderResponse = await insertOrder(req.body);
         res.status(StatusCodes.CREATED).json(ok("Order placed successfully", order));
 }
 
-export const putOrdersById = (req: Request, res: Response) => {
+export const putOrdersById = async (req: Request, res: Response) => {
         const { id } = req.params;
-        const order: OrderResponse = updateOrderById(Number(id), req.body);
+        const order: OrderResponse = await updateOrderById(Number(id), req.body);
         res.status(StatusCodes.OK).json(ok("Order updated successfully", order));
 }
 

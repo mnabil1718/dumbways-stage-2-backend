@@ -71,13 +71,13 @@ export function mapOrderToResponse(origin: Order, items: OrderItemResponse[], ad
         };
 }
 
-export function insertOrder(data: CreateOrder): OrderResponse {
+export async function insertOrder(data: CreateOrder): Promise<OrderResponse> {
         const orderId = calcLastId(orders);
         const items: OrderItemResponse[] = []; // this order's order items
         let total_amount = 0;
 
         for (const itm of data.items) {
-                const p = getProductById(itm.product_id);
+                const p = await getProductById(itm.product_id);
                 if (itm.qty > p.stock) {
                         throw new InvariantError("invalid product quantity");
                 }
@@ -109,7 +109,7 @@ export function insertOrder(data: CreateOrder): OrderResponse {
         return mapOrderToResponse(order, items, ship_addr_res);
 }
 
-export function updateOrderById(orderId: number, data: UpdateOrder): OrderResponse {
+export async function updateOrderById(orderId: number, data: UpdateOrder): Promise<OrderResponse> {
         const idx = orders.findIndex(o => o.id === orderId);
         if (idx === -1) throw new NotFoundError("Order not found");
         const o: Order = orders[idx];
@@ -129,7 +129,7 @@ export function updateOrderById(orderId: number, data: UpdateOrder): OrderRespon
 
                 for (const itm of data.items) {
                         const item = itm!;
-                        const p = getProductById(item.product_id);
+                        const p = await getProductById(item.product_id);
                         const orditm = insertOrderItems(orderId, p, item);
                         total_amount += orditm.subtotal;
                         items.push(mapOrderItemToResponse(orditm));
