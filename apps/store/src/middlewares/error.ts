@@ -1,12 +1,12 @@
-import { ClientError } from "@repo/shared";
+import { ClientError, fail } from "@repo/shared";
 import { NextFunction, Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
 
 export const errorHandler = (err: unknown, req: Request, res: Response, _: NextFunction) => {
         if (err instanceof ClientError) {
-                return res.status(err.statusCode).json({ message: err.message });
+                return res.status(err.statusCode).json(fail(err.message));
         }
 
         // fallback
-        res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: "Oops! Something went wrong" });
+        res.status(StatusCodes.INTERNAL_SERVER_ERROR).json(fail("Oops! something went wrong"));
 };

@@ -1,4 +1,4 @@
-import { slugify } from "@repo/shared";
+import { ok, slugify } from "@repo/shared";
 import { Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
 import { CreateProduct, deleteProductById, getAllProducts, getProductById, insertProduct, Product, updateProduct } from "../models/product-model";
@@ -21,12 +21,12 @@ export const postProducts = async (req: Request, res: Response) => {
         };
 
         const product = await insertProduct(createProduct);
-        res.status(StatusCodes.CREATED).json(product);
+        res.status(StatusCodes.CREATED).json(ok("Product added successfully", product));
 }
 
 export const getProducts = async (req: Request, res: Response) => {
         const products = await getAllProducts();
-        res.status(StatusCodes.OK).json(products);
+        res.status(StatusCodes.OK).json(ok("Products fetched successfully", products));
 }
 
 export const getProductsById = async (req: Request, res: Response) => {
@@ -34,7 +34,7 @@ export const getProductsById = async (req: Request, res: Response) => {
         const product = await getProductById(Number(id));
 
 
-        res.status(StatusCodes.OK).json(product);
+        res.status(StatusCodes.OK).json(ok("Product fetched successfully", product));
 }
 
 export const updateProductsById = async (req: Request, res: Response) => {
@@ -55,13 +55,14 @@ export const updateProductsById = async (req: Request, res: Response) => {
 
         const updated = await updateProduct(updateData);
 
-        res.status(StatusCodes.OK).json(updated);
+        res.status(StatusCodes.OK).json(ok("Product updated successfully", updated));
 }
 
 
 export const deleteProductsById = async (req: Request, res: Response) => {
         const { id } = req.params;
+        await getProductById(Number(id));
         const product = await deleteProductById(Number(id));
 
-        res.status(StatusCodes.OK).json(product);
+        res.status(StatusCodes.OK).json(ok("Product deleted successfully", product));
 }

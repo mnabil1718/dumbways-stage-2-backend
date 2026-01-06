@@ -64,11 +64,15 @@ export async function getAllProducts(): Promise<Product[]> {
 };
 
 export async function getProductById(id: number): Promise<Product> {
-        return await prisma.product.findUniqueOrThrow({
+        const product = await prisma.product.findUnique({
                 where: {
                         id,
                 },
         });
+
+        // custom not found error instead of prisma's
+        if (!product) throw new NotFoundError("Product not found");
+        return product;
 };
 
 export async function getProductBySlug(slug: string): Promise<Product> {

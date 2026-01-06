@@ -1,6 +1,6 @@
 import { ZodError } from "zod";
 
-export function formatZodErrorsAsObject(error: ZodError) {
+export function formatZodErrorsAsObject(error: ZodError): Record<string, string> {
         return error.issues.reduce((acc, issue) => {
                 const field = issue.path.join('.');
                 const msg = issue.message.split(":")[1].replace(/"/g, "").trim();
