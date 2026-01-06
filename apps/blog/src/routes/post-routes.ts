@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { deletePostsById, getPostsById, postPosts, putPosts } from "../controllers/post-controller";
-import { getPosts } from "../controllers/post-controller";
+import { deletePostsById, getPostsById, postPosts, putPosts } from "../controllers/posts-controller";
+import { getPosts } from "../controllers/posts-controller";
 import { validate } from "../middlewares/validate";
 import { CreatePostSchema, UpdatePostSchema } from "../models/post-model";
 
