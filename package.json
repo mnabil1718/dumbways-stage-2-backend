@@ -11,6 +11,7 @@
     "dev:blog": "npm run dev --workspace=apps/blog",
     "dev:store": "npm run dev --workspace=apps/store",
     "build:shared": "npm run build --workspace=packages/shared",
+    "seed:store": "npm run seed --workspace=apps/store",
     "lint:blog": "npx eslint apps/blog",
     "lint:store": "npx eslint apps/store",
     "lint": "npx eslint ."

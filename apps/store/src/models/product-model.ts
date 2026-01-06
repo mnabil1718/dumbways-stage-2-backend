@@ -1,11 +1,7 @@
 import { calcLastId, NotFoundError } from "@repo/shared";
 import z from "zod";
-
-export enum PRODUCT_STATUS {
-        ACTIVE = "active",
-        INACTIVE = "inactive",
-        DRAFT = "draft"
-}
+import { PRODUCT_STATUS } from "../../generated/prisma/enums";
+import { prisma } from "../lib/prisma";
 
 export interface Product {
         id: number;
@@ -57,15 +53,19 @@ export const products: Product[] = [
         },
 ];
 
-export function insertProduct(data: CreateProduct): Product {
-        const lastId = calcLastId(products);
-        const id: number = lastId;
-        const product: Product = {
-                id,
-                ...data,
-        };
-
-        products.push(product);
+export async function insertProduct(data: CreateProduct): Promise<Product> {
+        const product: Product = await prisma.product.create({
+                data: {
+                        name: data.name,
+                        slug: data.slug,
+                        desc: data.desc,
+                        price: data.price,
+                        stock: data.stock,
+                        status: data.status,
+                        created_at: data.created_at,
+                        updated_at: data.updated_at,
+                },
+        });
         return product;
 }
 

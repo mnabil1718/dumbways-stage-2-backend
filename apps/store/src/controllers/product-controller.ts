@@ -3,7 +3,7 @@ import { Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
 import { CreateProduct, deleteProductById, getAllProducts, getProductById, insertProduct, Product, updateProduct } from "../models/product-model";
 
-export const postProducts = (req: Request, res: Response) => {
+export const postProducts = async (req: Request, res: Response) => {
 
         const { name, desc, price, stock, status } = req.body;
         const now = new Date();
@@ -20,7 +20,7 @@ export const postProducts = (req: Request, res: Response) => {
                 updated_at: now,
         };
 
-        const product = insertProduct(createProduct);
+        const product = await insertProduct(createProduct);
         res.status(StatusCodes.CREATED).json(product);
 }
 
