@@ -13,5 +13,5 @@ app.use("/api/v1", appRoutes);
 app.use(errorHandler);
 
 app.listen(5000, () => {
-        console.log("CP2 running on port 5000...");
+        console.log("Store app running on port 5000...");
 });
