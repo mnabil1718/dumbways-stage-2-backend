@@ -4,11 +4,11 @@ import { Product } from "./product-model";
 
 export interface OrderItem {
         id: number;
-        order_id: number;     // references order
-        product_id: number;   // references Product
-        product_name: string; // copy product data incase of deletion
-        price: number;        // copy product data incase of deletion
-        subtotal: number;     // price * qty
+        order_id: number;      // references order
+        product_id: number;    // references Product
+        product_name: string;  // copy product data incase of deletion
+        product_price: number; // copy product data incase of deletion
+        subtotal: number;      // price * qty
         qty: number;
 }
 
@@ -22,9 +22,9 @@ export type CreateOrderItem = z.infer<typeof CreateOrderItemSchema>;
 export type OrderItemResponse = {
         product_id: number;
         product_name: string;
-        qty: number;
-        price: number;
+        product_price: number;
         subtotal: number;
+        qty: number;
 };
 
 // update schemas
@@ -43,7 +43,7 @@ export function mapOrderItemToResponse(origin: OrderItem): OrderItemResponse {
                 product_id: origin.product_id,
                 product_name: origin.product_name,
                 qty: origin.qty,
-                price: Math.round(100 * origin.price) / 100,
+                product_price: Math.round(100 * origin.product_price) / 100,
                 subtotal: Math.round(100 * origin.subtotal) / 100,
         }
 }
@@ -56,7 +56,7 @@ export function insertOrderItems(orderId: number, p: Product, data: CreateOrderI
                 order_id: orderId,
                 product_id: data.product_id,
                 product_name: p.name,
-                price: p.price,
+                product_price: p.price,
                 qty: data.qty,
                 subtotal,
         };

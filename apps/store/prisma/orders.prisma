@@ -1,0 +1,51 @@
+enum ORDER_STATUS {
+  PENDING
+  PROCESSING
+  COMPLETED
+  CANCELLED
+}
+
+enum PAYMENT_METHOD {
+  CASH
+  CREDIT_CARD
+  PAYPAL
+  GOPAY
+}
+
+model ShippingAddress {
+  id             Int     @id @default(autoincrement())
+  recipient_name String
+  street         String
+  city           String
+  province       String
+  postal_code    String
+  country        String
+  phone          String
+  orders         Order[] // one-to-many for save, re-usable address feature
+}
+
+model OrderItem {
+  id            Int     @id @default(autoincrement())
+  order_id      Int
+  product_id    Int
+  product_name  String
+  product_price Float
+  subtotal      Float
+  qty           Int
+  product       Product @relation(fields: [product_id], references: [id])
+  order         Order   @relation(fields: [order_id], references: [id], onDelete: Cascade)
+
+  @@unique([order_id, product_id]) // composite unique IDs
+}
+
+model Order {
+  id                  Int             @id @default(autoincrement())
+  shipping_address_id Int
+  shipping_address    ShippingAddress @relation(fields: [shipping_address_id], references: [id])
+  items               OrderItem[]
+  total_amount        Float
+  payment_method      PAYMENT_METHOD
+  status              ORDER_STATUS    @default(PENDING)
+  created_at          DateTime        @default(now())
+  updated_at          DateTime        @updatedAt
+}

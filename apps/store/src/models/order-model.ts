@@ -3,19 +3,8 @@ import { calcLastId, InvariantError, NotFoundError } from "@repo/shared";
 import { getProductById } from "./product-model";
 import { CreateOrderItemSchema, getOrderItemsByOrderId, insertOrderItems, mapOrderItemToResponse, order_items, OrderItemResponse, UpdateOrderItemSchema } from "./order-item-model";
 import { CreateShippingAddressSchema, getShippingAddressById, insertShippingAddress, mapShippingAddressToResponse, ShippingAddress, ShippingAddressResponse, UpdateShippingAddressSchema } from "./shipping-address-model";
+import { ORDER_STATUS, PAYMENT_METHOD } from "../../generated/prisma/enums";
 
-export enum ORDER_STATUS {
-        PENDING = "pending",
-        PROCESSING = "processing",
-        COMPLETED = "completed",
-        CANCELLED = "cancelled"
-}
-
-export enum PAYMENT_METHOD {
-        CASH = "cash",
-        CREDIT_CARD = "credit_card",
-        PAYPAL = "paypal",
-}
 
 export interface Order {
         id: number;
