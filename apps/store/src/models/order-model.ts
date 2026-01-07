@@ -209,6 +209,11 @@ export async function updateOrderById(orderId: number, update: UpdateOrder, curr
                 }
         });
 
+        if (update.shipping_address) {
+                // delete old if changed
+                await deleteShippingAddressById(curr.shipping_address_id);
+        }
+
         return mapOrderToResponse(order, mapOrderItemsToResponses(items), mapShippingAddressToResponse(addr));
 }
 
