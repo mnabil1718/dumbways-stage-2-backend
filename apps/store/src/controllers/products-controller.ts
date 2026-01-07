@@ -1,7 +1,7 @@
 import { ok, slugify } from "@repo/shared";
 import { Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
-import { CreateProduct, deleteProductById, getAllProducts, getProductById, insertProduct, Product, updateProduct } from "../models/product-model";
+import { CreateProduct, deleteProductById, getAllProducts, getProductById, insertProduct, Product, ProductFilter, updateProduct } from "../models/product-model";
 
 export const postProducts = async (req: Request, res: Response) => {
 
@@ -25,9 +25,7 @@ export const postProducts = async (req: Request, res: Response) => {
 }
 
 export const getProducts = async (req: Request, res: Response) => {
-        console.log("QUERY", req.query);
-
-        const products = await getAllProducts();
+        const products = await getAllProducts(req.filter as ProductFilter);
         res.status(StatusCodes.OK).json(ok("Products fetched successfully", products));
 }
 

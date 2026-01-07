@@ -2,6 +2,7 @@ import { NotFoundError } from "@repo/shared";
 import z from "zod";
 import { PRODUCT_STATUS } from "../../generated/prisma/enums";
 import { prisma } from "../lib/prisma";
+import { ProductOrderByWithRelationInput, ProductWhereInput } from "../../generated/prisma/models";
 
 export interface Product {
         id: number;
@@ -62,6 +63,22 @@ export const ProductFilterSchema = z.object({
                         code: "custom",
                 });
         }
+
+        if (data.sort !== undefined && data.order === undefined) {
+                ctx.addIssue({
+                        path: ["order"],
+                        message: "order have to be specified",
+                        code: "custom",
+                });
+        }
+
+        if (data.order !== undefined && data.sort === undefined) {
+                ctx.addIssue({
+                        path: ["sort"],
+                        message: "sort have to be specified",
+                        code: "custom",
+                });
+        }
 });
 
 export type ProductFilter = z.infer<typeof ProductFilterSchema>;
@@ -98,8 +115,39 @@ export async function updateProduct(product: Product): Promise<Product> {
         });
 }
 
-export async function getAllProducts(): Promise<Product[]> {
-        return await prisma.product.findMany();
+function buildWhere(filter: ProductFilter): ProductWhereInput {
+
+        const where: ProductWhereInput = {};
+
+        if (filter.min_price !== undefined || filter.max_price !== undefined) {
+                where.price = {
+                        gte: filter.min_price,
+                        lte: filter.max_price,
+                };
+        }
+
+        if (filter.min_stock !== undefined || filter.max_stock !== undefined) {
+                where.stock = {
+                        gte: filter.min_stock,
+                        lte: filter.max_stock,
+                };
+        }
+
+        return where;
+}
+
+function buildSort(filter: ProductFilter): ProductOrderByWithRelationInput | undefined {
+        if (!filter.sort) return;
+        return {
+                [filter.sort]: filter.order ?? "asc",
+        };
+}
+
+export async function getAllProducts(filter: ProductFilter): Promise<Product[]> {
+        return await prisma.product.findMany({
+                where: buildWhere(filter),
+                orderBy: buildSort(filter),
+        });
 };
 
 export async function getProductsByIds(ids: number[]): Promise<Product[]> {
