@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { calcLastId } from "@repo/shared";
 import { Product } from "./product-model";
+import { prisma } from "../lib/prisma";
 
 export interface OrderItem {
         id: number;
@@ -17,7 +18,7 @@ export const CreateOrderItemSchema = z.object({
         qty: z.number().gte(1),
 });
 
-export type CreateOrderItem = z.infer<typeof CreateOrderItemSchema>;
+export type CreateOrderItem = Omit<OrderItem, "id" | "order_id">;
 
 export type OrderItemResponse = {
         product_id: number;
@@ -52,24 +53,46 @@ export function mapOrderItemsToResponses(arr: OrderItem[]): OrderItemResponse[] 
         return arr.map(item => mapOrderItemToResponse(item));
 }
 
-export function insertOrderItems(orderId: number, p: Product, data: CreateOrderItem): OrderItem {
-        const orderItemId = calcLastId(order_items);
-        const subtotal = data.qty * p.price;
-        const orditm: OrderItem = {
-                id: orderItemId,
-                order_id: orderId,
-                product_id: data.product_id,
-                product_name: p.name,
-                product_price: p.price,
-                qty: data.qty,
-                subtotal,
-        };
+export async function insertOrderItems(orderId: number, temp_items: CreateOrderItem[]): Promise<OrderItem[]> {
 
-        order_items.push(orditm);
-        return orditm;
+        return await prisma.orderItem.createManyAndReturn({
+                data: temp_items.map((temp) => ({
+                        qty: temp.qty,
+                        order_id: orderId,
+                        product_id: temp.product_id,
+                        product_name: temp.product_name,
+                        product_price: temp.product_price,
+                        subtotal: temp.subtotal,
+                })),
+        });
+
 }
 
-export function getOrderItemsByOrderId(orderId: number): OrderItemResponse[] {
-        return order_items.filter(item => item.order_id === orderId).map((item) => mapOrderItemToResponse(item));
+export async function getOrderItemsByOrderId(orderId: number): Promise<OrderItemResponse[]> {
+        const items = await prisma.orderItem.findMany({
+                where: {
+                        order_id: orderId,
+                },
+        });
+
+        return mapOrderItemsToResponses(items);
 }
+
+
+
+export async function getOrderItemsByOrderIdAsOrderItem(orderId: number): Promise<OrderItem[]> {
+        return await prisma.orderItem.findMany({
+                where: {
+                        order_id: orderId,
+                },
+        });
+}
+
+export async function deleteOrderItemsByOrderId(orderId: number): Promise<void> {
+        await prisma.orderItem.deleteMany({
+                where: {
+                        order_id: orderId,
+                },
+        });
+} 
 

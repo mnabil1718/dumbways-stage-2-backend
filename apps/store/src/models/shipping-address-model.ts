@@ -65,8 +65,14 @@ export async function insertShippingAddress(data: CreateShippingAddress): Promis
         });
 }
 
-export function getShippingAddressById(id: number): ShippingAddressResponse {
-        const addr = shipping_addresses.find((addr) => addr.id === id);
+export async function getShippingAddressById(id: number): Promise<ShippingAddressResponse> {
+        const addr = await prisma.shippingAddress.findUnique({
+                where: {
+                        id,
+                },
+        });
+
         if (!addr) throw new NotFoundError("Shipping address not found");
+
         return mapShippingAddressToResponse(addr);
 }

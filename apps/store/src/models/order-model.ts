@@ -1,8 +1,8 @@
 import z from "zod";
-import { calcLastId, InvariantError, NotFoundError } from "@repo/shared";
-import { getProductById, Product } from "./product-model";
-import { CreateOrderItemSchema, getOrderItemsByOrderId, insertOrderItems, mapOrderItemsToResponses, mapOrderItemToResponse, order_items, OrderItem, OrderItemResponse, UpdateOrderItemSchema } from "./order-item-model";
-import { CreateShippingAddressSchema, getShippingAddressById, insertShippingAddress, mapShippingAddressToResponse, ShippingAddress, ShippingAddressResponse, UpdateShippingAddressSchema } from "./shipping-address-model";
+import { InvariantError, NotFoundError } from "@repo/shared";
+import { getProductsByIds, Product } from "./product-model";
+import { CreateOrderItem, CreateOrderItemSchema, deleteOrderItemsByOrderId, getOrderItemsByOrderId, getOrderItemsByOrderIdAsOrderItem, insertOrderItems, mapOrderItemsToResponses, mapOrderItemToResponse, order_items, OrderItem, OrderItemResponse, UpdateOrderItemSchema } from "./order-item-model";
+import { getShippingAddressById, mapShippingAddressToResponse, ShippingAddressResponse } from "./shipping-address-model";
 import { ORDER_STATUS, PAYMENT_METHOD, PRODUCT_STATUS } from "../../generated/prisma/enums";
 import { prisma } from "../lib/prisma";
 import { Prisma } from "../../generated/prisma/client";
@@ -20,8 +20,8 @@ export interface Order {
 
 export const CreateOrderSchema = z.object({
         items: z.array(CreateOrderItemSchema).min(1),
-        shipping_address: CreateShippingAddressSchema,
         payment_method: z.enum(PAYMENT_METHOD),
+        shipping_address_id: z.number(),
 });
 
 export type CreateOrder = z.infer<typeof CreateOrderSchema>;
@@ -31,7 +31,7 @@ export type CreateOrder = z.infer<typeof CreateOrderSchema>;
 export const UpdateOrderSchema = z.object({
         payment_method: z.enum(PAYMENT_METHOD).optional(),
         items: z.array(UpdateOrderItemSchema).optional(),
-        shipping_address: UpdateShippingAddressSchema,
+        shipping_address_id: z.number().optional(),
 });
 
 export type UpdateOrder = z.infer<typeof UpdateOrderSchema>;
@@ -46,8 +46,6 @@ export type OrderResponse = {
         created_at: Date;
         updated_at: Date;
 };
-
-export const orders: Order[] = [];
 
 export function mapOrderToResponse(origin: Order, items: OrderItemResponse[], addr: ShippingAddressResponse): OrderResponse {
         return {
@@ -67,15 +65,25 @@ export async function insertOrder(data: CreateOrder): Promise<OrderResponse> {
         let total_amount = 0;
 
         /***
-         * Insert new shipping address
+         * Fetch shipping address by id
+         *
+         * Returns a response already
          */
-        const new_addr: ShippingAddress = await insertShippingAddress(data.shipping_address);
+        const addr: ShippingAddressResponse = await getShippingAddressById(data.shipping_address_id);
 
         /***
          * Fetch products, out of stock checks, calculate temp items
          */
+        // get products once
+        const product_ids: number[] = data.items.map((i) => i.product_id);
+        const products = await getProductsByIds(product_ids);
+        const p_map: Map<number, Product> = new Map(products.map(p => [p.id, p]));
+
         for (const itm of data.items) {
-                const p: Product = await getProductById(itm.product_id);
+                const p = p_map.get(itm.product_id);
+                if (!p) throw new InvariantError("one of the order item is not found");
+
+
                 if (p.status !== PRODUCT_STATUS.ACTIVE) {
                         throw new InvariantError("inactive product");
                 }
@@ -104,7 +112,7 @@ export async function insertOrder(data: CreateOrder): Promise<OrderResponse> {
         const new_o: Order = await prisma.order.create({
                 data: {
                         payment_method: data.payment_method,
-                        shipping_address_id: new_addr.id,
+                        shipping_address_id: data.shipping_address_id,
                         total_amount,
                 }
         });
@@ -112,16 +120,7 @@ export async function insertOrder(data: CreateOrder): Promise<OrderResponse> {
         /***
          * Bulk insert order items 
          */
-        const order_items: OrderItem[] = await prisma.orderItem.createManyAndReturn({
-                data: temp_items.map((temp) => ({
-                        qty: temp.qty,
-                        order_id: new_o.id,
-                        product_id: temp.product_id,
-                        product_name: temp.product_name,
-                        product_price: temp.product_price,
-                        subtotal: temp.subtotal,
-                })),
-        });
+        const order_items: OrderItem[] = await insertOrderItems(new_o.id, temp_items);
 
         /***
          * Update product stock based on order qty.
@@ -129,7 +128,6 @@ export async function insertOrder(data: CreateOrder): Promise<OrderResponse> {
          * Using raw SQL to bulk update, maintaining performance.
          * NOTE: prisma `$executeRaw` is not susceptible to injection attacks
          */
-
         const values = temp_items.map(
                 (i) => Prisma.sql`(${i.product_id}::int, ${i.qty}::int)` // Cast here
         );
@@ -140,87 +138,137 @@ export async function insertOrder(data: CreateOrder): Promise<OrderResponse> {
 				 WHERE p.id = u.id AND p.stock >= u.qty;
 				 `;
 
-        const addr_res: ShippingAddressResponse = mapShippingAddressToResponse(new_addr);
+
         const items_res: OrderItemResponse[] = mapOrderItemsToResponses(order_items);
-        return mapOrderToResponse(new_o, items_res, addr_res);
+        return mapOrderToResponse(new_o, items_res, addr);
 }
 
-export async function updateOrderById(orderId: number, data: UpdateOrder): Promise<OrderResponse> {
-        const idx = orders.findIndex(o => o.id === orderId);
-        if (idx === -1) throw new NotFoundError("Order not found");
-        const o: Order = orders[idx];
+export async function updateOrderById(orderId: number, update: UpdateOrder, curr: Order): Promise<OrderResponse> {
+        if (curr.status != ORDER_STATUS.PENDING) throw new Error("Cannot update items on processed orders");
 
-        if (data.items && o.status != ORDER_STATUS.PENDING) throw new Error("Cannot update items on processed orders");
+        /***
+         * Fetch `shipping_address` regardless if user supplied `shipping_address_id` or not.
+         */
+        let addr: ShippingAddressResponse = await getShippingAddressById(update.shipping_address_id ?? curr.shipping_address_id);
 
-        let total_amount = o.total_amount;
-        let items: OrderItemResponse[] = getOrderItemsByOrderId(orderId);
-        if (data.items) {
+
+        /***
+         * Update order items if supplied
+         */
+        let total_amount = curr.total_amount;
+        let items: OrderItem[] = await getOrderItemsByOrderIdAsOrderItem(orderId);
+        if (update.items) {
                 // remove old items
-                const filtered = order_items.filter(itm => itm.order_id !== orderId);
-                order_items.length = 0;
-                order_items.push(...filtered);
+                await deleteOrderItemsByOrderId(orderId);
 
-                items = [];
+                // get products once
+                const product_ids: number[] = update.items.map((i) => i!.product_id);
+                const products = await getProductsByIds(product_ids);
+                const p_map: Map<number, Product> = new Map(products.map(p => [p.id, p]));
+
                 total_amount = 0;
+                const temp_items: CreateOrderItem[] = [];
 
-                for (const itm of data.items) {
-                        const item = itm!;
-                        const p = await getProductById(item.product_id);
-                        const orditm = insertOrderItems(orderId, p, item);
-                        total_amount += orditm.subtotal;
-                        items.push(mapOrderItemToResponse(orditm));
+                for (const item of update.items) {
+                        const p = p_map.get(item!.product_id);
+                        if (!p) throw new InvariantError("one of the order item is not found");
+                        const sub = p.price * item!.qty;
+
+                        temp_items.push({
+                                product_id: item!.product_id,
+                                product_name: p.name,
+                                product_price: p.price,
+                                subtotal: sub,
+                                qty: item!.qty,
+                        });
+
+                        total_amount += sub;
                 }
+
+                items = await insertOrderItems(orderId, temp_items);
         }
 
-        let o_addr: ShippingAddressResponse = getShippingAddressById(o.shipping_address_id);
-        if (data.shipping_address) {
-                const new_addr = insertShippingAddress(data.shipping_address);
-                o.shipping_address_id = new_addr.id;
-                o_addr = mapShippingAddressToResponse(new_addr);
-        }
+        /***
+         * Update order
+         */
+        const order: Order = await prisma.order.update({
+                where: {
+                        id: orderId,
+                },
+                data: {
+                        payment_method: update.payment_method ?? curr.payment_method,
+                        shipping_address_id: update.shipping_address_id ?? curr.shipping_address_id,
+                        updated_at: new Date(),
+                        total_amount,
+                }
+        });
 
-        if (data.payment_method) {
-                o.payment_method = data.payment_method;
-        }
-
-        o.total_amount = total_amount;
-        o.updated_at = new Date();
-
-        orders[idx] = o;
-        return mapOrderToResponse(o, items, o_addr);
+        return mapOrderToResponse(order, mapOrderItemsToResponses(items), addr);
 }
 
-export function getAllOrders(): OrderResponse[] {
-        const ords: OrderResponse[] = [];
+export async function getAllOrders(): Promise<OrderResponse[]> {
+        const res: OrderResponse[] = [];
+
+        const orders = await prisma.order.findMany({
+                include: {
+                        items: true,
+                        shipping_address: true,
+                },
+        });
 
         for (const o of orders) {
-                const o_items: OrderItemResponse[] = getOrderItemsByOrderId(o.id);
-                const o_addr: ShippingAddressResponse = getShippingAddressById(o.shipping_address_id);
-                ords.push(mapOrderToResponse(o, o_items, o_addr));
+                const o_itm = mapOrderItemsToResponses(o.items);
+                const o_addr = mapShippingAddressToResponse(o.shipping_address);
+                const mapped = mapOrderToResponse(o, o_itm, o_addr);
+                res.push(mapped);
         }
 
-        return ords;
+        return res;
 }
 
-export function getOrderById(id: number): OrderResponse {
-        const o = orders.find(o => o.id === id);
+export async function getOrderById(id: number): Promise<OrderResponse> {
+        const o = await prisma.order.findUnique({
+                where: {
+                        id,
+                },
+                include: {
+                        items: true,
+                        shipping_address: true,
+                },
+        });
 
         if (!o) throw new NotFoundError("Order not found");
 
-        const o_items: OrderItemResponse[] = getOrderItemsByOrderId(o.id);
-        const o_addr: ShippingAddressResponse = getShippingAddressById(o.shipping_address_id);
+        const o_items: OrderItemResponse[] = mapOrderItemsToResponses(o.items);
+        const o_addr: ShippingAddressResponse = mapShippingAddressToResponse(o.shipping_address);
 
         return mapOrderToResponse(o, o_items, o_addr);
 }
 
+export async function getOrderByIdAsOrder(id: number): Promise<Order> {
+        const o = await prisma.order.findUnique({
+                where: {
+                        id,
+                },
+        });
 
-export function deleteOrderById(id: number): OrderResponse {
-        const idx: number = orders.findIndex(o => o.id === id);
-        if (idx === -1) throw new NotFoundError("Order not found");
-        const o: Order = orders.splice(idx, 1)[0];
+        if (!o) throw new NotFoundError("Order not found");
+        return o;
+}
 
-        const o_items: OrderItemResponse[] = getOrderItemsByOrderId(o.id);
-        const o_addr: ShippingAddressResponse = getShippingAddressById(o.shipping_address_id);
 
-        return mapOrderToResponse(o, o_items, o_addr);
+export async function deleteOrderById(id: number): Promise<OrderResponse> {
+        const order = await prisma.order.delete({
+                where: {
+                        id,
+                },
+                include: {
+                        items: true,
+                        shipping_address: true,
+                },
+        });
+
+        const o_items: OrderItemResponse[] = mapOrderItemsToResponses(order.items);
+        const o_addr: ShippingAddressResponse = mapShippingAddressToResponse(order.shipping_address);
+        return mapOrderToResponse(order, o_items, o_addr);
 }

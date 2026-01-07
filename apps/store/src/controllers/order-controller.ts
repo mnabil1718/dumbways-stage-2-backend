@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { deleteOrderById, getAllOrders, getOrderById, insertOrder, OrderResponse, updateOrderById } from "../models/order-model";
+import { deleteOrderById, getAllOrders, getOrderById, getOrderByIdAsOrder, insertOrder, Order, OrderResponse, updateOrderById } from "../models/order-model";
 import { StatusCodes } from "http-status-codes";
 import { ok } from "@repo/shared";
 
@@ -11,24 +11,29 @@ export const postOrders = async (req: Request, res: Response) => {
 
 export const putOrdersById = async (req: Request, res: Response) => {
         const { id } = req.params;
-        const order: OrderResponse = await updateOrderById(Number(id), req.body);
+
+        const o: Order = await getOrderByIdAsOrder(Number(id));
+        const order: OrderResponse = await updateOrderById(Number(id), req.body, o);
+
         res.status(StatusCodes.OK).json(ok("Order updated successfully", order));
 }
 
-export const getOrders = (req: Request, res: Response) => {
-        const orders: OrderResponse[] = getAllOrders();
+export const getOrders = async (req: Request, res: Response) => {
+        const orders: OrderResponse[] = await getAllOrders();
         res.status(StatusCodes.OK).json(ok("Orders fetched successfully", orders));
 }
 
-export const getOrdersById = (req: Request, res: Response) => {
+export const getOrdersById = async (req: Request, res: Response) => {
         const { id } = req.params;
-        const order: OrderResponse = getOrderById(Number(id));
+        const order: OrderResponse = await getOrderById(Number(id));
         res.status(StatusCodes.OK).json(ok("Order fetched successfully", order));
 }
 
-export const deleteOrdersById = (req: Request, res: Response) => {
+export const deleteOrdersById = async (req: Request, res: Response) => {
         const { id } = req.params;
-        const order: OrderResponse = deleteOrderById(Number(id));
+        await getOrderByIdAsOrder(Number(id));
+
+        const order: OrderResponse = await deleteOrderById(Number(id));
         res.status(StatusCodes.OK).json(ok("Order deleted successfully", order));
 }
 

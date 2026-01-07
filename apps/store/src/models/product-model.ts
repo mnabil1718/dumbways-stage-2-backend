@@ -63,6 +63,16 @@ export async function getAllProducts(): Promise<Product[]> {
         return await prisma.product.findMany();
 };
 
+export async function getProductsByIds(ids: number[]): Promise<Product[]> {
+        return await prisma.product.findMany({
+                where: {
+                        id: {
+                                in: ids,
+                        },
+                },
+        });
+}
+
 export async function getProductById(id: number): Promise<Product> {
         const product = await prisma.product.findUnique({
                 where: {
