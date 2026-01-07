@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { deleteProductsById, getProducts, getProductsById, postProducts, updateProductsById } from "../controllers/product-controller";
+import { deleteProductsById, getProducts, getProductsById, postProducts, updateProductsById } from "../controllers/products-controller";
 import { validate } from "../middlewares/validate";
 import { CreateProductSchema, UpdateProductSchema } from "../models/product-model";
 

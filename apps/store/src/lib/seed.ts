@@ -6,11 +6,40 @@ import {
 import { prisma } from "./prisma";
 
 async function main() {
-        /* -----------------------------
-         * PRODUCTS
-         * ----------------------------- */
+        /* =============================
+         * CLEAN EXISTING DATA
+         * ============================= */
+        await prisma.orderItem.deleteMany();
+        await prisma.order.deleteMany();
+        await prisma.shippingAddress.deleteMany();
         await prisma.product.deleteMany();
+        await prisma.user.deleteMany();
 
+        /* =============================
+         * SEED USERS (FIRST)
+         * ============================= */
+        await prisma.user.createMany({
+                data: [
+                        {
+                                email: "john@example.com",
+                                name: "John Doe",
+                                password: "hashed_password_1",
+                        },
+                        {
+                                email: "jane@example.com",
+                                name: "Jane Smith",
+                                password: "hashed_password_2",
+                        },
+                ],
+        });
+
+        const users = await prisma.user.findMany({
+                orderBy: { id: "asc" },
+        });
+
+        /* =============================
+         * SEED PRODUCTS
+         * ============================= */
         await prisma.product.createMany({
                 data: [
                         {
@@ -56,26 +85,17 @@ async function main() {
                 ],
         });
 
-        // ⬅️ IMPORTANT: fetch AFTER seeding
         const products = await prisma.product.findMany({
                 orderBy: { id: "asc" },
         });
 
-        await seedOrders(products);
-}
-
-async function seedOrders(products: any[]) {
-        /* -----------------------------
-         * CLEAN ORDER DATA
-         * ----------------------------- */
-        await prisma.orderItem.deleteMany();
-        await prisma.order.deleteMany();
-        await prisma.shippingAddress.deleteMany();
-
-        if (products.length < 3) {
-                throw new Error("Not enough products to seed orders.");
+        if (users.length < 1 || products.length < 2) {
+                throw new Error("Not enough users or products to seed orders.");
         }
 
+        /* =============================
+         * SEED ORDERS
+         * ============================= */
         const address = await prisma.shippingAddress.create({
                 data: {
                         recipient_name: "John Doe",
@@ -100,6 +120,7 @@ async function seedOrders(products: any[]) {
 
         await prisma.order.create({
                 data: {
+                        user_id: users[0].id,
                         shipping_address_id: address.id,
                         payment_method: PAYMENT_METHOD.CREDIT_CARD,
                         status: ORDER_STATUS.PROCESSING,
@@ -116,11 +137,11 @@ async function seedOrders(products: any[]) {
                 },
         });
 
-        console.log("Orders & shipping seeded ✅");
+        console.log("Users, products, orders & shipping seeded...");
 }
 
 main()
-        .then(() => console.log("Seeding completed 🚀"))
+        .then(() => console.log("Seeding completed..."))
         .catch(console.error)
         .finally(async () => {
                 await prisma.$disconnect();

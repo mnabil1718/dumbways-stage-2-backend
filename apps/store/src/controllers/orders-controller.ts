@@ -6,6 +6,10 @@ import { ok } from "@repo/shared";
 
 export const postOrders = async (req: Request, res: Response) => {
         const order: OrderResponse = await insertOrder(req.body);
+	const create: CreateOrder = {
+		...req.body,
+		user_id: 1, // dummy
+	}
         res.status(StatusCodes.CREATED).json(ok("Order placed successfully", order));
 }
 

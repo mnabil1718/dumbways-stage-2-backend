@@ -1,8 +1,8 @@
 import z from "zod";
 import { InvariantError, NotFoundError } from "@repo/shared";
 import { getProductsByIds, Product } from "./product-model";
-import { CreateOrderItem, CreateOrderItemSchema, deleteOrderItemsByOrderId, getOrderItemsByOrderId, getOrderItemsByOrderIdAsOrderItem, insertOrderItems, mapOrderItemsToResponses, mapOrderItemToResponse, order_items, OrderItem, OrderItemResponse, UpdateOrderItemSchema } from "./order-item-model";
-import { CreateShippingAddressSchema, deleteShippingAddressById, getShippingAddressById, getShippingAddressByIdNonResponse, insertShippingAddress, insertShippingAddressAsResponse, mapShippingAddressToResponse, ShippingAddress, ShippingAddressResponse, UpdateShippingAddressSchema } from "./shipping-address-model";
+import { CreateOrderItem, CreateOrderItemSchema, deleteOrderItemsByOrderId, getOrderItemsByOrderIdAsOrderItem, insertOrderItems, mapOrderItemsToResponses, OrderItem, OrderItemResponse, UpdateOrderItemSchema } from "./order-item-model";
+import { CreateShippingAddressSchema, deleteShippingAddressById, getShippingAddressByIdNonResponse, insertShippingAddress, mapShippingAddressToResponse, ShippingAddress, ShippingAddressResponse, UpdateShippingAddressSchema } from "./shipping-address-model";
 import { ORDER_STATUS, PAYMENT_METHOD, PRODUCT_STATUS } from "../../generated/prisma/enums";
 import { prisma } from "../lib/prisma";
 import { Prisma } from "../../generated/prisma/client";
@@ -10,6 +10,7 @@ import { Prisma } from "../../generated/prisma/client";
 
 export interface Order {
         id: number;
+        user_id: number;
         total_amount: number;           // total price all items
         shipping_address_id: number;    // references shipping address
         payment_method: PAYMENT_METHOD;
@@ -24,7 +25,9 @@ export const CreateOrderSchema = z.object({
         payment_method: z.enum(PAYMENT_METHOD),
 });
 
-export type CreateOrder = z.infer<typeof CreateOrderSchema>;
+export type CreateOrder = z.infer<typeof CreateOrderSchema> & {
+        user_id: number;
+};
 
 // update
 
@@ -112,6 +115,7 @@ export async function insertOrder(data: CreateOrder): Promise<OrderResponse> {
                 data: {
                         payment_method: data.payment_method,
                         shipping_address_id: addr.id,
+                        user_id: data.user_id,
                         total_amount,
                 }
         });
@@ -210,7 +214,8 @@ export async function updateOrderById(orderId: number, update: UpdateOrder, curr
         });
 
         if (update.shipping_address) {
-                // delete old if changed
+                // delete old if changed, after 
+                // order:shipping_address_id is updated
                 await deleteShippingAddressById(curr.shipping_address_id);
         }
 

@@ -40,6 +40,8 @@ model OrderItem {
 
 model Order {
   id                  Int             @id @default(autoincrement())
+  user_id  Int
+  user    User    @relation(fields: [user_id], references: [id], onDelete: Cascade)
   shipping_address_id Int
   shipping_address    ShippingAddress @relation(fields: [shipping_address_id], references: [id])
   items               OrderItem[]
