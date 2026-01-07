@@ -48,6 +48,10 @@ export function mapOrderItemToResponse(origin: OrderItem): OrderItemResponse {
         }
 }
 
+export function mapOrderItemsToResponses(arr: OrderItem[]): OrderItemResponse[] {
+        return arr.map(item => mapOrderItemToResponse(item));
+}
+
 export function insertOrderItems(orderId: number, p: Product, data: CreateOrderItem): OrderItem {
         const orderItemId = calcLastId(order_items);
         const subtotal = data.qty * p.price;

@@ -1,9 +1,11 @@
 import z from "zod";
 import { calcLastId, InvariantError, NotFoundError } from "@repo/shared";
-import { getProductById } from "./product-model";
-import { CreateOrderItemSchema, getOrderItemsByOrderId, insertOrderItems, mapOrderItemToResponse, order_items, OrderItemResponse, UpdateOrderItemSchema } from "./order-item-model";
+import { getProductById, Product } from "./product-model";
+import { CreateOrderItemSchema, getOrderItemsByOrderId, insertOrderItems, mapOrderItemsToResponses, mapOrderItemToResponse, order_items, OrderItem, OrderItemResponse, UpdateOrderItemSchema } from "./order-item-model";
 import { CreateShippingAddressSchema, getShippingAddressById, insertShippingAddress, mapShippingAddressToResponse, ShippingAddress, ShippingAddressResponse, UpdateShippingAddressSchema } from "./shipping-address-model";
-import { ORDER_STATUS, PAYMENT_METHOD } from "../../generated/prisma/enums";
+import { ORDER_STATUS, PAYMENT_METHOD, PRODUCT_STATUS } from "../../generated/prisma/enums";
+import { prisma } from "../lib/prisma";
+import { Prisma } from "../../generated/prisma/client";
 
 
 export interface Order {
@@ -61,41 +63,86 @@ export function mapOrderToResponse(origin: Order, items: OrderItemResponse[], ad
 }
 
 export async function insertOrder(data: CreateOrder): Promise<OrderResponse> {
-        const orderId = calcLastId(orders);
-        const items: OrderItemResponse[] = []; // this order's order items
+        const temp_items: Omit<OrderItem, "id" | "order_id">[] = [];
         let total_amount = 0;
 
+        /***
+         * Insert new shipping address
+         */
+        const new_addr: ShippingAddress = await insertShippingAddress(data.shipping_address);
+
+        /***
+         * Fetch products, out of stock checks, calculate temp items
+         */
         for (const itm of data.items) {
-                const p = await getProductById(itm.product_id);
-                if (itm.qty > p.stock) {
-                        throw new InvariantError("invalid product quantity");
+                const p: Product = await getProductById(itm.product_id);
+                if (p.status !== PRODUCT_STATUS.ACTIVE) {
+                        throw new InvariantError("inactive product");
                 }
 
-                const orditm = insertOrderItems(orderId, p, itm);
-                total_amount += orditm.subtotal;
-                items.push(mapOrderItemToResponse(orditm)); // for order final response
+                if (itm.qty > p.stock) {
+                        throw new InvariantError("insufficient product quantity");
+                }
+
+                const subtotal = itm.qty * p.price;
+                total_amount += subtotal;
+
+                const temp: Omit<OrderItem, "id" | "order_id"> = {
+                        product_id: p.id,
+                        product_name: p.name,
+                        product_price: p.price,
+                        qty: itm.qty,
+                        subtotal,
+                };
+
+                temp_items.push(temp);
         }
 
+        /***
+         * Insert order
+         */
+        const new_o: Order = await prisma.order.create({
+                data: {
+                        payment_method: data.payment_method,
+                        shipping_address_id: new_addr.id,
+                        total_amount,
+                }
+        });
 
-        const addr: ShippingAddress = insertShippingAddress(data.shipping_address);
-        const newStatus = ORDER_STATUS.PENDING;
-        const now = new Date();
+        /***
+         * Bulk insert order items 
+         */
+        const order_items: OrderItem[] = await prisma.orderItem.createManyAndReturn({
+                data: temp_items.map((temp) => ({
+                        qty: temp.qty,
+                        order_id: new_o.id,
+                        product_id: temp.product_id,
+                        product_name: temp.product_name,
+                        product_price: temp.product_price,
+                        subtotal: temp.subtotal,
+                })),
+        });
 
-        const order: Order = {
-                id: orderId,
-                total_amount,
-                shipping_address_id: addr.id,
-                payment_method: data.payment_method,
-                status: newStatus,
-                created_at: now,
-                updated_at: now,
-        };
+        /***
+         * Update product stock based on order qty.
+         *
+         * Using raw SQL to bulk update, maintaining performance.
+         * NOTE: prisma `$executeRaw` is not susceptible to injection attacks
+         */
 
-        orders.push(order);
+        const values = temp_items.map(
+                (i) => Prisma.sql`(${i.product_id}::int, ${i.qty}::int)` // Cast here
+        );
+        await prisma.$executeRaw`WITH updates(id, qty) AS (VALUES ${Prisma.join(values)})
+				 UPDATE "Product" p
+				 SET stock = stock - u.qty
+				 FROM updates u
+				 WHERE p.id = u.id AND p.stock >= u.qty;
+				 `;
 
-        const ship_addr_res: ShippingAddressResponse = mapShippingAddressToResponse(addr);
-
-        return mapOrderToResponse(order, items, ship_addr_res);
+        const addr_res: ShippingAddressResponse = mapShippingAddressToResponse(new_addr);
+        const items_res: OrderItemResponse[] = mapOrderItemsToResponses(order_items);
+        return mapOrderToResponse(new_o, items_res, addr_res);
 }
 
 export async function updateOrderById(orderId: number, data: UpdateOrder): Promise<OrderResponse> {

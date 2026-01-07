@@ -1,5 +1,6 @@
 import { calcLastId, NotFoundError } from "@repo/shared";
 import { z } from "zod";
+import { prisma } from "../lib/prisma";
 
 export interface ShippingAddress {
         id: number;
@@ -49,21 +50,19 @@ export function mapShippingAddressToResponse(origin: ShippingAddress): ShippingA
 
 }
 
-export function insertShippingAddress(data: CreateShippingAddress): ShippingAddress {
+export async function insertShippingAddress(data: CreateShippingAddress): Promise<ShippingAddress> {
 
-        const addr: ShippingAddress = {
-                id: calcLastId(shipping_addresses),
-                recipient_name: data.recipient_name,
-                city: data.city,
-                country: data.country,
-                phone: data.phone,
-                postal_code: data.postal_code,
-                province: data.province,
-                street: data.street,
-        };
-
-        shipping_addresses.push(addr);
-        return addr;
+        return await prisma.shippingAddress.create({
+                data: {
+                        recipient_name: data.recipient_name,
+                        city: data.city,
+                        country: data.country,
+                        phone: data.phone,
+                        postal_code: data.postal_code,
+                        province: data.province,
+                        street: data.street,
+                },
+        });
 }
 
 export function getShippingAddressById(id: number): ShippingAddressResponse {
