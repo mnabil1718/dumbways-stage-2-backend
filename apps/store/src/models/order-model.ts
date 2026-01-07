@@ -2,7 +2,7 @@ import z from "zod";
 import { InvariantError, NotFoundError } from "@repo/shared";
 import { getProductsByIds, Product } from "./product-model";
 import { CreateOrderItem, CreateOrderItemSchema, deleteOrderItemsByOrderId, getOrderItemsByOrderId, getOrderItemsByOrderIdAsOrderItem, insertOrderItems, mapOrderItemsToResponses, mapOrderItemToResponse, order_items, OrderItem, OrderItemResponse, UpdateOrderItemSchema } from "./order-item-model";
-import { getShippingAddressById, mapShippingAddressToResponse, ShippingAddressResponse } from "./shipping-address-model";
+import { CreateShippingAddressSchema, deleteShippingAddressById, getShippingAddressById, getShippingAddressByIdNonResponse, insertShippingAddress, insertShippingAddressAsResponse, mapShippingAddressToResponse, ShippingAddress, ShippingAddressResponse, UpdateShippingAddressSchema } from "./shipping-address-model";
 import { ORDER_STATUS, PAYMENT_METHOD, PRODUCT_STATUS } from "../../generated/prisma/enums";
 import { prisma } from "../lib/prisma";
 import { Prisma } from "../../generated/prisma/client";
@@ -20,8 +20,8 @@ export interface Order {
 
 export const CreateOrderSchema = z.object({
         items: z.array(CreateOrderItemSchema).min(1),
+        shipping_address: CreateShippingAddressSchema,
         payment_method: z.enum(PAYMENT_METHOD),
-        shipping_address_id: z.number(),
 });
 
 export type CreateOrder = z.infer<typeof CreateOrderSchema>;
@@ -31,7 +31,7 @@ export type CreateOrder = z.infer<typeof CreateOrderSchema>;
 export const UpdateOrderSchema = z.object({
         payment_method: z.enum(PAYMENT_METHOD).optional(),
         items: z.array(UpdateOrderItemSchema).optional(),
-        shipping_address_id: z.number().optional(),
+        shipping_address: UpdateShippingAddressSchema,
 });
 
 export type UpdateOrder = z.infer<typeof UpdateOrderSchema>;
@@ -61,15 +61,14 @@ export function mapOrderToResponse(origin: Order, items: OrderItemResponse[], ad
 }
 
 export async function insertOrder(data: CreateOrder): Promise<OrderResponse> {
-        const temp_items: Omit<OrderItem, "id" | "order_id">[] = [];
+        const temp_items: CreateOrderItem[] = [];
         let total_amount = 0;
 
         /***
-         * Fetch shipping address by id
-         *
-         * Returns a response already
+         * Insert address from request
+         * Returns `ShippingAddress`
          */
-        const addr: ShippingAddressResponse = await getShippingAddressById(data.shipping_address_id);
+        const addr: ShippingAddress = await insertShippingAddress(data.shipping_address);
 
         /***
          * Fetch products, out of stock checks, calculate temp items
@@ -112,7 +111,7 @@ export async function insertOrder(data: CreateOrder): Promise<OrderResponse> {
         const new_o: Order = await prisma.order.create({
                 data: {
                         payment_method: data.payment_method,
-                        shipping_address_id: data.shipping_address_id,
+                        shipping_address_id: addr.id,
                         total_amount,
                 }
         });
@@ -140,17 +139,24 @@ export async function insertOrder(data: CreateOrder): Promise<OrderResponse> {
 
 
         const items_res: OrderItemResponse[] = mapOrderItemsToResponses(order_items);
-        return mapOrderToResponse(new_o, items_res, addr);
+        const addr_res: ShippingAddressResponse = mapShippingAddressToResponse(addr);
+        return mapOrderToResponse(new_o, items_res, addr_res);
 }
 
 export async function updateOrderById(orderId: number, update: UpdateOrder, curr: Order): Promise<OrderResponse> {
         if (curr.status != ORDER_STATUS.PENDING) throw new Error("Cannot update items on processed orders");
 
         /***
-         * Fetch `shipping_address` regardless if user supplied `shipping_address_id` or not.
+         * Replace related shipping address if changed. Fetch old data otherwise.
          */
-        let addr: ShippingAddressResponse = await getShippingAddressById(update.shipping_address_id ?? curr.shipping_address_id);
-
+        let addr: ShippingAddress;
+        if (update.shipping_address) {
+                // insert new one
+                addr = await insertShippingAddress(update.shipping_address);
+        } else {
+                // get existing
+                addr = await getShippingAddressByIdNonResponse(curr.shipping_address_id);
+        }
 
         /***
          * Update order items if supplied
@@ -197,13 +203,13 @@ export async function updateOrderById(orderId: number, update: UpdateOrder, curr
                 },
                 data: {
                         payment_method: update.payment_method ?? curr.payment_method,
-                        shipping_address_id: update.shipping_address_id ?? curr.shipping_address_id,
+                        shipping_address_id: addr.id,
                         updated_at: new Date(),
                         total_amount,
                 }
         });
 
-        return mapOrderToResponse(order, mapOrderItemsToResponses(items), addr);
+        return mapOrderToResponse(order, mapOrderItemsToResponses(items), mapShippingAddressToResponse(addr));
 }
 
 export async function getAllOrders(): Promise<OrderResponse[]> {

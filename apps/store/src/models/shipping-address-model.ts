@@ -1,4 +1,4 @@
-import { calcLastId, NotFoundError } from "@repo/shared";
+import { NotFoundError } from "@repo/shared";
 import { z } from "zod";
 import { prisma } from "../lib/prisma";
 
@@ -31,7 +31,7 @@ export type ShippingAddressResponse = z.infer<typeof CreateShippingAddressSchema
 
 export const UpdateShippingAddressSchema = CreateShippingAddressSchema.optional();
 
-export type UpdateShippingAddress = z.infer<typeof UpdateShippingAddressSchema>;
+export type UpdateShippingAddress = Omit<ShippingAddress, "id">;
 
 // in-mem store
 
@@ -65,6 +65,43 @@ export async function insertShippingAddress(data: CreateShippingAddress): Promis
         });
 }
 
+export async function insertShippingAddressAsResponse(data: CreateShippingAddress): Promise<ShippingAddressResponse> {
+
+        const addr = await prisma.shippingAddress.create({
+                data: {
+                        recipient_name: data.recipient_name,
+                        city: data.city,
+                        country: data.country,
+                        phone: data.phone,
+                        postal_code: data.postal_code,
+                        province: data.province,
+                        street: data.street,
+                },
+        });
+
+        return mapShippingAddressToResponse(addr);
+}
+
+
+export async function updateShippingAddressById(id: number, data: UpdateShippingAddress): Promise<ShippingAddressResponse> {
+        const addr = await prisma.shippingAddress.update({
+                where: {
+                        id,
+                },
+                data: {
+                        recipient_name: data.recipient_name,
+                        city: data.city,
+                        country: data.country,
+                        phone: data.phone,
+                        postal_code: data.postal_code,
+                        province: data.province,
+                        street: data.street,
+                },
+        });
+
+        return mapShippingAddressToResponse(addr);
+}
+
 export async function getShippingAddressById(id: number): Promise<ShippingAddressResponse> {
         const addr = await prisma.shippingAddress.findUnique({
                 where: {
@@ -73,6 +110,30 @@ export async function getShippingAddressById(id: number): Promise<ShippingAddres
         });
 
         if (!addr) throw new NotFoundError("Shipping address not found");
+
+        return mapShippingAddressToResponse(addr);
+}
+
+
+export async function getShippingAddressByIdNonResponse(id: number): Promise<ShippingAddress> {
+        const addr = await prisma.shippingAddress.findUnique({
+                where: {
+                        id,
+                },
+        });
+
+        if (!addr) throw new NotFoundError("Shipping address not found");
+
+        return addr;
+}
+
+
+export async function deleteShippingAddressById(id: number): Promise<ShippingAddressResponse> {
+        const addr = await prisma.shippingAddress.delete({
+                where: {
+                        id,
+                },
+        });
 
         return mapShippingAddressToResponse(addr);
 }
