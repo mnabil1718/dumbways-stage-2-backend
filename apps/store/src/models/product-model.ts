@@ -1,4 +1,4 @@
-import { calcLastId, NotFoundError } from "@repo/shared";
+import { NotFoundError } from "@repo/shared";
 import z from "zod";
 import { PRODUCT_STATUS } from "../../generated/prisma/enums";
 import { prisma } from "../lib/prisma";
@@ -16,6 +16,8 @@ export interface Product {
 }
 
 
+// =========  CREATE  ============
+
 export type CreateProduct = Omit<Product, "id">;
 
 export const CreateProductSchema = z.object({
@@ -26,7 +28,44 @@ export const CreateProductSchema = z.object({
         status: z.enum(PRODUCT_STATUS),
 });
 
+// =========  UPDATE  ============
+
 export const UpdateProductSchema = CreateProductSchema.partial();
+
+
+// =========  FILTERS ============
+
+// number fields are coerced because it
+// will initially be string from req.query
+export const ProductFilterSchema = z.object({
+        order: z.literal(["desc", "asc"]).optional(),
+        sort: z.literal(["price", "stock"]).optional(),
+        max_price: z.coerce.number().gte(0).optional(),
+        min_price: z.coerce.number().gte(0).optional(),
+        max_stock: z.coerce.number().gte(0).optional(),
+        min_stock: z.coerce.number().gte(0).optional(),
+        page: z.coerce.number().gte(1).optional(),
+        limit: z.coerce.number().gte(0).lte(100).optional(),
+}).superRefine((data, ctx) => {
+        if (data.min_price !== undefined && data.max_price !== undefined && data.min_price > data.max_price) {
+                ctx.addIssue({
+                        path: ["max_price"],
+                        message: "min_price cannot be greater than max_price",
+                        code: "custom",
+                });
+        }
+
+        if (data.min_stock !== undefined && data.max_stock !== undefined && data.min_stock > data.max_stock) {
+                ctx.addIssue({
+                        path: ["max_stock"],
+                        message: "min_stock cannot be greater than max_stock",
+                        code: "custom",
+                });
+        }
+});
+
+export type ProductFilter = z.infer<typeof ProductFilterSchema>;
+
 
 export async function insertProduct(data: CreateProduct): Promise<Product> {
         return await prisma.product.create({

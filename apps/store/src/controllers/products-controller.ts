@@ -25,6 +25,8 @@ export const postProducts = async (req: Request, res: Response) => {
 }
 
 export const getProducts = async (req: Request, res: Response) => {
+        console.log("QUERY", req.query);
+
         const products = await getAllProducts();
         res.status(StatusCodes.OK).json(ok("Products fetched successfully", products));
 }
