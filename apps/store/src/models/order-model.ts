@@ -3,9 +3,9 @@ import { calculatePaginationMetadata, InvariantError, NotFoundError, PaginationF
 import { getProductsByIds, Product } from "./product-model";
 import { CreateOrderItem, CreateOrderItemSchema, deleteOrderItemsByOrderId, getOrderItemsByOrderIdAsOrderItem, insertOrderItems, mapOrderItemsToResponses, OrderItem, OrderItemResponse, UpdateOrderItemSchema } from "./order-item-model";
 import { CreateShippingAddressSchema, deleteShippingAddressById, getShippingAddressByIdNonResponse, insertShippingAddress, mapShippingAddressToResponse, ShippingAddress, ShippingAddressResponse, UpdateShippingAddressSchema } from "./shipping-address-model";
-import { ORDER_STATUS, PAYMENT_METHOD, PRODUCT_STATUS } from "../../generated/prisma/enums";
+import { ORDER_STATUS, PAYMENT_METHOD, PRODUCT_STATUS } from "../generated/prisma/enums";
 import { prisma } from "../lib/prisma";
-import { Prisma } from "../../generated/prisma/client";
+import { Prisma } from "../generated/prisma/client";
 
 
 export interface Order {

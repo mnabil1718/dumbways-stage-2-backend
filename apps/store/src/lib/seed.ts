@@ -2,7 +2,7 @@ import {
         ORDER_STATUS,
         PAYMENT_METHOD,
         PRODUCT_STATUS,
-} from "../../generated/prisma/enums";
+} from "../generated/prisma/enums";
 import { prisma } from "./prisma";
 
 async function main() {

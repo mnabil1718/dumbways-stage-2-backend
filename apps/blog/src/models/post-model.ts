@@ -1,7 +1,7 @@
 import { NotFoundError } from "@repo/shared";
 import { prisma } from "../lib/prisma";
 import z from "zod";
-import { Prisma } from "../../generated/prisma/client";
+import { Prisma } from "../generated/prisma/client";
 
 export interface Post {
         id: number;

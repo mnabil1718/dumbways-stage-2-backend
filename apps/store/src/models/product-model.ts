@@ -1,8 +1,8 @@
 import { NotFoundError } from "@repo/shared";
 import z from "zod";
-import { PRODUCT_STATUS } from "../../generated/prisma/enums";
+import { PRODUCT_STATUS } from "../generated/prisma/enums";
 import { prisma } from "../lib/prisma";
-import { ProductOrderByWithRelationInput, ProductWhereInput } from "../../generated/prisma/models";
+import { ProductOrderByWithRelationInput, ProductWhereInput } from "../generated/prisma/models";
 import { buildPaginationQuery, calculatePaginationMetadata, PaginationFilter, PaginationMetadata } from "@repo/shared";
 
 export interface Product {
