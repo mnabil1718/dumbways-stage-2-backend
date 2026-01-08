@@ -2,6 +2,8 @@ import { prisma } from "./prisma";
 
 async function main() {
         // Clean up (order matters because of relations)
+        await prisma.categoriesOnPosts.deleteMany();
+        await prisma.category.deleteMany();
         await prisma.post.deleteMany();
         await prisma.user.deleteMany();
 
@@ -32,6 +34,19 @@ async function main() {
         const alice = allUsers.find(u => u.email === "alice@example.com")!;
         const bob = allUsers.find(u => u.email === "bob@example.com")!;
         const charlie = allUsers.find(u => u.email === "charlie@example.com")!;
+
+
+        // Create categories
+        await prisma.category.createMany({
+                data: [
+                        { name: "Prisma" },
+                        { name: "TypeScript" },
+                        { name: "PostgreSQL" },
+                        { name: "Linux" },
+                        { name: "Backend" },
+                ],
+                skipDuplicates: true,
+        });
 
         // Create posts
         await prisma.post.createMany({

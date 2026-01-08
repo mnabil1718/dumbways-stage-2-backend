@@ -12,21 +12,3 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
-
-model User {
-  id       Int    @id @default(autoincrement())
-  email    String @unique
-  name     String
-  password String
-  posts    Post[]
-}
-
-model Post {
-  id        Int     @id @default(autoincrement())
-  slug      String  @unique
-  title     String
-  content   String
-  published Boolean @default(false)
-  author    User    @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  authorId  Int
-}
