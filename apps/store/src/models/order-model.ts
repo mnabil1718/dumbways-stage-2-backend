@@ -23,11 +23,10 @@ export const CreateOrderSchema = z.object({
         items: z.array(CreateOrderItemSchema).min(1),
         shipping_address: CreateShippingAddressSchema,
         payment_method: z.enum(PAYMENT_METHOD),
+        user_id: z.number().min(1),
 });
 
-export type CreateOrder = z.infer<typeof CreateOrderSchema> & {
-        user_id: number;
-};
+export type CreateOrder = z.infer<typeof CreateOrderSchema>;
 
 // update
 
@@ -49,6 +48,14 @@ export type OrderResponse = {
         created_at: Date;
         updated_at: Date;
 };
+
+export interface OrderSummary {
+        user_id: number;
+        user_name: string;
+        total_amount: number;
+        order_count: number;
+}
+
 
 export function mapOrderToResponse(origin: Order, items: OrderItemResponse[], addr: ShippingAddressResponse): OrderResponse {
         return {
@@ -287,4 +294,28 @@ export async function deleteOrderById(id: number): Promise<OrderResponse> {
         const o_items: OrderItemResponse[] = mapOrderItemsToResponses(order.items);
         const o_addr: ShippingAddressResponse = mapShippingAddressToResponse(order.shipping_address);
         return mapOrderToResponse(order, o_items, o_addr);
+}
+
+
+export async function groupOrderSummaryByUserId(): Promise<OrderSummary[]> {
+
+        // Use raw SQL because Prisma does not support fetching relation data on
+        // group by: https://github.com/prisma/prisma/discussions/6517
+        //
+        //  NOTE: PostgreSQL COUNT() returns BIGINT by default.for typescript
+        // numbers to work with it, just parse into PostgreSQL INT.
+
+        const res: OrderSummary[] = await prisma.$queryRaw`
+					SELECT 
+						u.id AS user_id,
+						u.name AS user_name,
+						COUNT(o.id)::int AS order_count,
+						SUM(o.total_amount) AS total_amount
+					FROM "Order" o
+					JOIN "User" u
+					ON o.user_id = u.id
+					GROUP BY u.id, u.name;
+					`;
+        return res;
+
 }

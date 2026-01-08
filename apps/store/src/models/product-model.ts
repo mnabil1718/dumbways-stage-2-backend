@@ -140,15 +140,18 @@ export async function updateProduct(product: Product): Promise<Product> {
 
 export async function getAllProducts(filter: ProductFilter, pFilter: PaginationFilter): Promise<PaginatedProducts> {
         const pagination = buildPaginationQuery(pFilter);
-        const products = await prisma.product.findMany({
-                where: buildWhere(filter),
-                orderBy: buildSort(filter),
-                ...pagination,
-        });
-        const total_items = await prisma.product.count({
-                where: buildWhere(filter),
-                orderBy: buildSort(filter),
-        });
+
+        // run concurrently
+        const [products, total_items] = await Promise.all([
+                prisma.product.findMany({
+                        where: buildWhere(filter),
+                        orderBy: buildSort(filter),
+                        ...pagination,
+                }),
+                prisma.product.count({
+                        where: buildWhere(filter),
+                }),
+        ]);
 
         return {
                 products,

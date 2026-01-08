@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { CreateOrder, deleteOrderById, getAllOrders, getOrderById, getOrderByIdAsOrder, insertOrder, Order, OrderResponse, updateOrderById } from "../models/order-model";
+import { CreateOrder, deleteOrderById, getAllOrders, getOrderById, getOrderByIdAsOrder, groupOrderSummaryByUserId, insertOrder, Order, OrderResponse, OrderSummary, updateOrderById } from "../models/order-model";
 import { StatusCodes } from "http-status-codes";
 import { ok } from "@repo/shared";
 import { ProductFilter } from "../models/product-model";
@@ -7,11 +7,7 @@ import { ProductFilter } from "../models/product-model";
 
 export const postOrders = async (req: Request, res: Response) => {
         const order: OrderResponse = await insertOrder(req.body);
-        const create: CreateOrder = {
-                ...req.body,
-                user_id: 1, // dummy
-        };
-        res.status(StatusCodes.CREATED).json(ok("Order placed successfully", create));
+        res.status(StatusCodes.CREATED).json(ok("Order placed successfully", order));
 }
 
 export const putOrdersById = async (req: Request, res: Response) => {
@@ -23,9 +19,6 @@ export const putOrdersById = async (req: Request, res: Response) => {
 }
 
 export const getOrders = async (req: Request, res: Response) => {
-        const fl: ProductFilter = {
-
-        }
         const orders: OrderResponse[] = await getAllOrders();
         res.status(StatusCodes.OK).json(ok("Orders fetched successfully", orders));
 }
@@ -44,4 +37,8 @@ export const deleteOrdersById = async (req: Request, res: Response) => {
         res.status(StatusCodes.OK).json(ok("Order deleted successfully", order));
 }
 
+export const getOrderSummaries = async (req: Request, res: Response) => {
+        const result: OrderSummary[] = await groupOrderSummaryByUserId();
+        res.status(StatusCodes.OK).json(ok("Order summaries fetched successfully", result));
+}
 
