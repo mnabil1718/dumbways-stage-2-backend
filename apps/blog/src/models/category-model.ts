@@ -57,6 +57,9 @@ export async function getCategoryById(id: number): Promise<Category> {
 
 
 export async function deleteCategoryById(id: number): Promise<Category> {
+        await prisma.categoriesOnPosts.deleteMany({
+                where: { categoryId: id },
+        });
         return await prisma.category.delete({
                 where: {
                         id,
