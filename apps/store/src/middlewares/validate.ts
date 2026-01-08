@@ -23,7 +23,6 @@ export function validateQuery<T extends z.ZodTypeAny>(schema: T) {
                         const msgs: Record<string, string> = formatZodErrorsAsObject(result.error);
                         return res.status(StatusCodes.BAD_REQUEST).json(fail("query string validation failed", msgs));
                 } else {
-                        req.filter = result.data as any;
                         next();
                 }
         }

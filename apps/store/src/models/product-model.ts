@@ -3,6 +3,7 @@ import z from "zod";
 import { PRODUCT_STATUS } from "../../generated/prisma/enums";
 import { prisma } from "../lib/prisma";
 import { ProductOrderByWithRelationInput, ProductWhereInput } from "../../generated/prisma/models";
+import { buildPaginationQuery, calculatePaginationMetadata, PaginationFilter, PaginationMetadata } from "@repo/shared";
 
 export interface Product {
         id: number;
@@ -14,6 +15,11 @@ export interface Product {
         status: PRODUCT_STATUS;
         created_at: Date;
         updated_at: Date;
+}
+
+export interface PaginatedProducts {
+        products: Product[];
+        medatada?: PaginationMetadata;
 }
 
 
@@ -41,12 +47,10 @@ export const UpdateProductSchema = CreateProductSchema.partial();
 export const ProductFilterSchema = z.object({
         order: z.literal(["desc", "asc"]).optional(),
         sort: z.literal(["price", "stock"]).optional(),
-        max_price: z.coerce.number().gte(0).optional(),
-        min_price: z.coerce.number().gte(0).optional(),
-        max_stock: z.coerce.number().gte(0).optional(),
-        min_stock: z.coerce.number().gte(0).optional(),
-        page: z.coerce.number().gte(1).optional(),
-        limit: z.coerce.number().gte(0).lte(100).optional(),
+        max_price: z.coerce.number().nonnegative().optional(),
+        min_price: z.coerce.number().nonnegative().optional(),
+        max_stock: z.coerce.number().nonnegative().optional(),
+        min_stock: z.coerce.number().nonnegative().optional(),
 }).superRefine((data, ctx) => {
         if (data.min_price !== undefined && data.max_price !== undefined && data.min_price > data.max_price) {
                 ctx.addIssue({
@@ -64,14 +68,6 @@ export const ProductFilterSchema = z.object({
                 });
         }
 
-        // if (data.sort !== undefined && data.order === undefined) {
-        //         ctx.addIssue({
-        //                 path: ["order"],
-        //                 message: "order have to be specified",
-        //                 code: "custom",
-        //         });
-        // }
-
         if (data.order !== undefined && data.sort === undefined) {
                 ctx.addIssue({
                         path: ["sort"],
@@ -84,9 +80,7 @@ export const ProductFilterSchema = z.object({
 export type ProductFilter = z.infer<typeof ProductFilterSchema>;
 
 function buildWhere(filter: ProductFilter): ProductWhereInput {
-
         const where: ProductWhereInput = {};
-
         if (filter.min_price !== undefined || filter.max_price !== undefined) {
                 where.price = {
                         gte: filter.min_price,
@@ -110,6 +104,7 @@ function buildSort(filter: ProductFilter): ProductOrderByWithRelationInput | und
                 [filter.sort]: filter.order ?? "desc",
         };
 }
+
 
 
 export async function insertProduct(data: CreateProduct): Promise<Product> {
@@ -143,11 +138,22 @@ export async function updateProduct(product: Product): Promise<Product> {
         });
 }
 
-export async function getAllProducts(filter: ProductFilter): Promise<Product[]> {
-        return await prisma.product.findMany({
+export async function getAllProducts(filter: ProductFilter, pFilter: PaginationFilter): Promise<PaginatedProducts> {
+        const pagination = buildPaginationQuery(pFilter);
+        const products = await prisma.product.findMany({
+                where: buildWhere(filter),
+                orderBy: buildSort(filter),
+                ...pagination,
+        });
+        const total_items = await prisma.product.count({
                 where: buildWhere(filter),
                 orderBy: buildSort(filter),
         });
+
+        return {
+                products,
+                metadata: calculatePaginationMetadata(pFilter, total_items),
+        } as PaginatedProducts;
 };
 
 export async function getProductsByIds(ids: number[]): Promise<Product[]> {

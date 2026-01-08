@@ -1,7 +1,7 @@
-import { ok, slugify } from "@repo/shared";
+import { ok, PaginationFilter, PaginationFilterSchema, slugify } from "@repo/shared";
 import { Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
-import { CreateProduct, deleteProductById, getAllProducts, getProductById, insertProduct, Product, ProductFilter, updateProduct } from "../models/product-model";
+import { CreateProduct, deleteProductById, getAllProducts, getProductById, insertProduct, Product, ProductFilter, ProductFilterSchema, updateProduct } from "../models/product-model";
 
 export const postProducts = async (req: Request, res: Response) => {
 
@@ -25,8 +25,11 @@ export const postProducts = async (req: Request, res: Response) => {
 }
 
 export const getProducts = async (req: Request, res: Response) => {
-        const products = await getAllProducts(req.filter as ProductFilter);
-        res.status(StatusCodes.OK).json(ok("Products fetched successfully", products));
+        const filter: ProductFilter = ProductFilterSchema.parse(req.query);
+        const pFilter: PaginationFilter = PaginationFilterSchema.parse(req.query);
+
+        const response = await getAllProducts(filter, pFilter);
+        res.status(StatusCodes.OK).json(ok("Products fetched successfully", response));
 }
 
 export const getProductsById = async (req: Request, res: Response) => {
