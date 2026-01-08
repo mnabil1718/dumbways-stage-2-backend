@@ -13,6 +13,7 @@ export interface Product {
         price: number;
         stock: number;
         status: PRODUCT_STATUS;
+        is_deleted: boolean;
         created_at: Date;
         updated_at: Date;
 }
@@ -190,9 +191,13 @@ export async function getProductBySlug(slug: string): Promise<Product> {
 };
 
 export async function deleteProductById(id: number): Promise<Product> {
-        return await prisma.product.delete({
+        // soft-delete product, because it is related to order items.
+        return await prisma.product.update({
                 where: {
                         id,
+                },
+                data: {
+                        is_deleted: true,
                 },
         });
 }
