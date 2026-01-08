@@ -1,5 +1,5 @@
 import z from "zod";
-import { InvariantError, NotFoundError } from "@repo/shared";
+import { calculatePaginationMetadata, InvariantError, NotFoundError, PaginationFilter, PaginationMetadata } from "@repo/shared";
 import { getProductsByIds, Product } from "./product-model";
 import { CreateOrderItem, CreateOrderItemSchema, deleteOrderItemsByOrderId, getOrderItemsByOrderIdAsOrderItem, insertOrderItems, mapOrderItemsToResponses, OrderItem, OrderItemResponse, UpdateOrderItemSchema } from "./order-item-model";
 import { CreateShippingAddressSchema, deleteShippingAddressById, getShippingAddressByIdNonResponse, insertShippingAddress, mapShippingAddressToResponse, ShippingAddress, ShippingAddressResponse, UpdateShippingAddressSchema } from "./shipping-address-model";
@@ -54,6 +54,30 @@ export interface OrderSummary {
         user_name: string;
         total_amount: number;
         order_count: number;
+}
+
+export type RawOrderSummary = OrderSummary & {
+        total_items: number;
+};
+
+export interface PaginatedOrderSummary {
+        metadata: PaginationMetadata;
+        summaries: OrderSummary[];
+}
+
+
+export function mapRawOrderSummariestoResponses(arr: RawOrderSummary[]): { summaries: OrderSummary[], total_items: number } {
+        if (arr.length === 0) return { summaries: [], total_items: 0 };
+
+        const total_items = arr[0].total_items;
+        const summaries: OrderSummary[] = arr.map((summary) => ({
+                user_id: summary.user_id,
+                user_name: summary.user_name,
+                total_amount: summary.total_amount,
+                order_count: summary.order_count,
+        }));
+
+        return { summaries, total_items };
 }
 
 
@@ -297,7 +321,11 @@ export async function deleteOrderById(id: number): Promise<OrderResponse> {
 }
 
 
-export async function groupOrderSummaryByUserId(): Promise<OrderSummary[]> {
+export async function groupOrderSummaryByUserId(pFilter: PaginationFilter): Promise<PaginatedOrderSummary> {
+
+        const limit = Math.min(pFilter.limit ?? 100, 100);
+        const current_page = pFilter.page ?? 1;
+        const offset = (current_page - 1) * limit;
 
         // Use raw SQL because Prisma does not support fetching relation data on
         // group by: https://github.com/prisma/prisma/discussions/6517
@@ -305,8 +333,9 @@ export async function groupOrderSummaryByUserId(): Promise<OrderSummary[]> {
         //  NOTE: PostgreSQL COUNT() returns BIGINT by default.for typescript
         // numbers to work with it, just parse into PostgreSQL INT.
 
-        const res: OrderSummary[] = await prisma.$queryRaw`
+        const res: RawOrderSummary[] = await prisma.$queryRaw`
 					SELECT 
+						COUNT(*) OVER ()::int AS total_items,
 						u.id AS user_id,
 						u.name AS user_name,
 						COUNT(o.id)::int AS order_count,
@@ -314,8 +343,16 @@ export async function groupOrderSummaryByUserId(): Promise<OrderSummary[]> {
 					FROM "Order" o
 					JOIN "User" u
 					ON o.user_id = u.id
-					GROUP BY u.id, u.name;
+					GROUP BY u.id, u.name
+					LIMIT ${limit} OFFSET ${offset};
 					`;
-        return res;
+
+        const { summaries, total_items } = mapRawOrderSummariestoResponses(res);
+        const metadata: PaginationMetadata = calculatePaginationMetadata(pFilter, total_items);
+        return {
+                summaries,
+                metadata,
+        };
+
 
 }

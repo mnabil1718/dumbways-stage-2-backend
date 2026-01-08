@@ -2,8 +2,8 @@
 import z from "zod";
 
 export const PaginationFilterSchema = z.object({
-        page: z.coerce.number().nonnegative().gte(1).optional(),
-        limit: z.coerce.number().nonnegative().lte(100).optional(),
+        page: z.coerce.number().gte(1).optional(),
+        limit: z.coerce.number().gte(1).lte(100).optional(),
 });
 
 export type PaginationFilter = z.infer<typeof PaginationFilterSchema>;
