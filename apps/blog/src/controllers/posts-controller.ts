@@ -1,7 +1,8 @@
 import { Request, Response } from "express";
-import { ok, slugify } from "@repo/shared";
+import { ok, PaginationFilter, PaginationFilterSchema, slugify } from "@repo/shared";
 import { CreatePost, getPostById, insertPost, getAllPosts, getPostBySlug, deletePostById, updatePostById, PostResponse, UpdatePost, checkPostIDExists, PostFilter, PostFilterSchema } from "../models/post-model";
 import { StatusCodes } from "http-status-codes";
+import { getCommentsByPostId } from "../models/comment-model";
 
 export const postPosts = async (req: Request, res: Response) => {
 
@@ -66,4 +67,16 @@ export const deletePostsById = async (req: Request, res: Response) => {
         await checkPostIDExists(Number(id));
         const post = await deletePostById(Number(id));
         res.status(StatusCodes.OK).json(ok("Post deleted successfully", post));
+}
+
+
+export const getPostsComments = async (req: Request, res: Response) => {
+        const { id } = req.params;
+        const postId: number = Number(id);
+        const pFilter: PaginationFilter = PaginationFilterSchema.parse(req.query);
+
+        await checkPostIDExists(postId);
+
+        const comments = await getCommentsByPostId(postId, pFilter);
+        res.status(StatusCodes.OK).json(ok("Comments fetched successfully", comments));
 }

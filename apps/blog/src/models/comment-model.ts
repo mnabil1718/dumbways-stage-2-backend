@@ -1,7 +1,7 @@
 import z from "zod";
 import { prisma } from "../lib/prisma";
 import { Prisma } from "../generated/prisma/client";
-import { NotFoundError } from "@repo/shared";
+import { buildPaginationQuery, calculatePaginationMetadata, NotFoundError, PaginationFilter, PaginationMetadata } from "@repo/shared";
 
 export interface Comment {
         id: number;
@@ -17,6 +17,12 @@ export interface CommentResponse {
         content: string;
         created_at: Date;
 }
+
+export interface PaginatedComment {
+        comments: CommentResponse[];
+        metadata: PaginationMetadata;
+}
+
 
 
 export type CommentWithRelations = Prisma.CommentGetPayload<{
@@ -56,6 +62,10 @@ export function mapCommentToResponse(origin: CommentWithRelations): CommentRespo
                 content: origin.content,
                 created_at: origin.created_at,
         };
+}
+
+export function mapCommentsToResponses(arr: CommentWithRelations[]): CommentResponse[] {
+        return arr.map((c) => mapCommentToResponse(c));
 }
 
 
@@ -108,4 +118,29 @@ export async function getCommentById(id: number): Promise<Comment> {
 
         if (!c) throw new NotFoundError("Comment not found");
         return c;
+}
+
+
+export async function getCommentsByPostId(postId: number, pFilter: PaginationFilter): Promise<PaginatedComment> {
+        const pagination = buildPaginationQuery(pFilter);
+
+        const [comments, total_items] = await Promise.all([
+                prisma.comment.findMany({
+                        where: {
+                                postId,
+                        },
+                        include: includes,
+                        ...pagination,
+                }),
+                prisma.comment.count({
+                        where: {
+                                postId,
+                        },
+                }),
+        ]);
+
+        return {
+                comments: mapCommentsToResponses(comments),
+                metadata: calculatePaginationMetadata(pFilter, total_items),
+        } as PaginatedComment;
 }

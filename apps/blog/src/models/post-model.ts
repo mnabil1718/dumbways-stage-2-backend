@@ -1,4 +1,4 @@
-import { NotFoundError } from "@repo/shared";
+import { buildPaginationQuery, NotFoundError, PaginationFilter } from "@repo/shared";
 import { prisma } from "../lib/prisma";
 import z from "zod";
 import { Prisma } from "../generated/prisma/client";
@@ -272,4 +272,23 @@ export async function deletePostById(id: number): Promise<PostResponse> {
         });
 
         return mapPostToResponse(post);
+}
+
+
+export async function getCommentsByPostId(postId: number, pFilter: PaginationFilter): Promise<Comment[]> {
+        const pagination = buildPaginationQuery(pFilter);
+        const [comments, total_items] = await Promise.all([
+                prisma.comment.findMany({
+                        where: {
+                                postId,
+                        },
+                        ...pagination,
+                }),
+                prisma.comment.findMany({
+                        where: {
+                                postId,
+                        },
+                }),
+        ]);
+
 }
