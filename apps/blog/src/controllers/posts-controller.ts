@@ -5,7 +5,7 @@ import { StatusCodes } from "http-status-codes";
 
 export const postPosts = async (req: Request, res: Response) => {
 
-        const { title, content, published } = req.body;
+        const { title, content, published, category_ids } = req.body;
 
         const slug: string = slugify(title);
         const authorId = 1;  // dummy, later will be retrieved from auth info or token
@@ -15,6 +15,7 @@ export const postPosts = async (req: Request, res: Response) => {
                 slug,
                 authorId,
                 published,
+                category_ids,
         };
 
         const post = await insertPost(createPost);
@@ -23,14 +24,16 @@ export const postPosts = async (req: Request, res: Response) => {
 
 export const putPosts = async (req: Request, res: Response) => {
         const { id } = req.params;
-        const { title, content, published } = req.body;
+        const { title, content, published, category_ids } = req.body;
 
         const p: PostResponse = await getPostById(Number(id));
+        const old_category_ids = p.categories.map(c => c.id);
         const update: UpdatePost = {
                 id: p.id,
                 title: title ?? p.title,
                 content: content ?? p.content,
                 published: published ?? p.published,
+                category_ids: category_ids ?? old_category_ids,
         };
 
         const post = await updatePostById(update);
