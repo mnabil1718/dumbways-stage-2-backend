@@ -4,4 +4,5 @@ model User {
   name     String
   password String
   posts    Post[]
+  comments Comment[]
 }

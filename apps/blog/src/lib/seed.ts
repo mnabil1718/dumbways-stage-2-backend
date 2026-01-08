@@ -3,6 +3,7 @@ import { prisma } from "./prisma";
 async function main() {
         // Clean up (order matters because of relations)
         await prisma.categoriesOnPosts.deleteMany();
+        await prisma.comment.deleteMany();
         await prisma.category.deleteMany();
         await prisma.post.deleteMany();
         await prisma.user.deleteMany();
@@ -34,7 +35,6 @@ async function main() {
         const alice = allUsers.find(u => u.email === "alice@example.com")!;
         const bob = allUsers.find(u => u.email === "bob@example.com")!;
         const charlie = allUsers.find(u => u.email === "charlie@example.com")!;
-
 
         // Create categories
         await prisma.category.createMany({
@@ -81,11 +81,44 @@ async function main() {
                         },
                 ],
         });
+
+        // Fetch posts to get their IDs
+        const allPosts = await prisma.post.findMany();
+
+        const prismaPost = allPosts.find(p => p.slug === "getting-started-with-prisma")!;
+        const tsPost = allPosts.find(p => p.slug === "typescript-backend-tips")!;
+        const pgPost = allPosts.find(p => p.slug === "why-i-love-postgresql")!;
+
+        // Create comments (SAFE: users + posts already exist)
+        await prisma.comment.createMany({
+                data: [
+                        {
+                                content: "Great introduction! Prisma is awesome.",
+                                userId: bob.id,
+                                postId: prismaPost.id,
+                        },
+                        {
+                                content: "Helped me a lot, thanks!",
+                                userId: charlie.id,
+                                postId: prismaPost.id,
+                        },
+                        {
+                                content: "Nice tips, especially about types.",
+                                userId: bob.id,
+                                postId: tsPost.id,
+                        },
+                        {
+                                content: "PostgreSQL gang 💪",
+                                userId: alice.id,
+                                postId: pgPost.id,
+                        },
+                ],
+        });
 }
 
 main()
         .then(() => {
-                console.log("User & Post seeding completed...");
+                console.log("Seeding completed (users, posts, comments)...");
         })
         .catch((e) => {
                 console.error(e);
