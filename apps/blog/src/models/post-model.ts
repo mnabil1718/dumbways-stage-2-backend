@@ -3,6 +3,7 @@ import { prisma } from "../lib/prisma";
 import z from "zod";
 import { Prisma } from "../generated/prisma/client";
 import { Category } from "./category-model";
+import { PostWhereInput } from "../generated/prisma/models";
 
 export interface Post {
         id: number;
@@ -36,6 +37,9 @@ export const includes = {
                         category: true,
                 },
         },
+        _count: {
+                select: { comments: true }
+        }
 } satisfies Prisma.PostInclude;
 
 /***
@@ -74,26 +78,37 @@ export interface PostResponse {
         }
 }
 
-export function mapPostToResponse(origin: PostWithRelations): PostResponse {
+export type PostWithCommentCountResponse = PostResponse & { comment_count: number; };
 
-        return {
-                id: origin.id,
-                slug: origin.slug,
-                title: origin.title,
-                content: origin.content,
-                published: origin.published,
-                categories: origin.categories.map(c => c.category),
-                author: {
-                        name: origin.author.name,
-                }
-        };
+// ===== FILTERS ======
+
+/***
+* parse query string 
+* categories=1,2,3,4 into [1,2,3,4]
+*/
+function parseCSVToArray(s: unknown): unknown {
+        if (typeof s === "string") {
+                return s
+                        .split(",")
+                        .map(Number);
+        }
+
+        // probably fail
+        return s;
 }
 
-export function mapPoststoResponses(arr: PostWithRelations[]): PostResponse[] {
-        return arr.map((p) => {
-                return mapPostToResponse(p);
-        });
-}
+export const PostFilterSchema = z.object({
+        categories: z.preprocess((val) => {
+                return parseCSVToArray(val);
+        },
+                z.array(z.number().gte(1)).max(5),
+        ).optional(),
+        min_comments: z.coerce.number().nonnegative().optional(),
+});
+
+export type PostFilter = z.infer<typeof PostFilterSchema>;
+
+// ==== QUERY BUILDERS ====
 
 export function buildCategoriesQuery(arr?: number[]): undefined | Prisma.CategoriesOnPostsCreateNestedManyWithoutPostInput {
         let res: Prisma.CategoriesOnPostsCreateWithoutPostInput[] = [];
@@ -113,6 +128,31 @@ export function buildCategoriesQuery(arr?: number[]): undefined | Prisma.Categor
         return { create: res };
 }
 
+
+// ===== MAPPERS =====
+
+export function mapPostToResponse(origin: PostWithRelations): PostResponse {
+        return {
+                id: origin.id,
+                slug: origin.slug,
+                title: origin.title,
+                content: origin.content,
+                published: origin.published,
+                categories: origin.categories.map(c => c.category),
+                author: {
+                        name: origin.author.name,
+                }
+        };
+}
+
+
+export function mapPoststoResponses(arr: PostWithRelations[]): PostResponse[] {
+        return arr.map((p) => {
+                return mapPostToResponse(p);
+        });
+}
+
+// ===== QUERIES =====
 
 // useful for update and delete checks
 export async function checkPostIDExists(id: number): Promise<void> {
@@ -160,11 +200,42 @@ export async function updatePostById(data: UpdatePost): Promise<PostResponse> {
         return mapPostToResponse(post);
 }
 
-export async function getAllPosts(): Promise<PostResponse[]> {
-        const posts: PostWithRelations[] = await prisma.post.findMany({
-                include: includes,
-        });
-        return mapPoststoResponses(posts);
+export async function getAllPosts(filter: PostFilter): Promise<PostWithCommentCountResponse[]> {
+        const min = filter.min_comments ?? 0;
+        const filterArray = filter.categories ?? [];
+
+
+        const posts: PostWithCommentCountResponse[] =
+                await prisma.$queryRaw`
+				SELECT
+				    p.id,
+				    p.slug,
+				    p.title,
+				    p.content,
+				    p.published,
+				    json_build_object(
+					'name', u.name
+				    ) AS author,
+				    COALESCE(
+					json_agg(json_build_object('id', c.id, 'nama', c.name))
+					FILTER (WHERE c.id IS NOT NULL), '[]'
+				    ) AS categories,
+				    COUNT(DISTINCT cm.id)::int AS comment_count
+				FROM "Post" p
+				JOIN "User" u ON u.id = p."authorId"
+				LEFT JOIN "CategoriesOnPosts" cp ON cp."postId" = p.id
+				LEFT JOIN "Category" c ON c.id = cp."categoryId"
+				LEFT JOIN "Comment" cm ON cm."postId" = p.id
+				GROUP BY p.id, u.id, u.name
+				HAVING 
+				COUNT(DISTINCT cm.id)::int >= ${min}
+				AND (
+					cardinality(${filterArray}::int[]) = 0 OR 
+					array_agg(c.id) && ${filterArray}::int[]
+				)
+				`;
+
+        return posts;
 };
 
 export async function getPostById(id: number): Promise<PostResponse> {
