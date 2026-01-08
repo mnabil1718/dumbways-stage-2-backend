@@ -1,8 +1,7 @@
 import { Request, Response } from "express";
-import { CreateOrder, deleteOrderById, getAllOrders, getOrderById, getOrderByIdAsOrder, groupOrderSummaryByUserId, insertOrder, Order, OrderResponse, OrderSummary, PaginatedOrderSummary, updateOrderById } from "../models/order-model";
+import { deleteOrderById, getAllOrders, getOrderById, getOrderByIdAsOrder, groupOrderSummaryByUserId, insertOrder, Order, OrderResponse, PaginatedOrderSummary, updateOrderById } from "../models/order-model";
 import { StatusCodes } from "http-status-codes";
 import { ok, PaginationFilter, PaginationFilterSchema } from "@repo/shared";
-import { ProductFilter } from "../models/product-model";
 
 
 export const postOrders = async (req: Request, res: Response) => {

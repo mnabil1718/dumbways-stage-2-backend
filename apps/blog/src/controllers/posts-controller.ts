@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { ok, slugify } from "@repo/shared";
-import { CreatePost, getPostById, insertPost, getAllPosts, getPostBySlug, deletePostById, Post, updatePostById, PostResponse, UpdatePost, checkPostIDExists } from "../models/post-model";
+import { CreatePost, getPostById, insertPost, getAllPosts, getPostBySlug, deletePostById, updatePostById, PostResponse, UpdatePost, checkPostIDExists } from "../models/post-model";
 import { StatusCodes } from "http-status-codes";
 
 export const postPosts = async (req: Request, res: Response) => {

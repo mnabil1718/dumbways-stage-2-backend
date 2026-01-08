@@ -1,6 +1,4 @@
 import { z } from "zod";
-import { calcLastId } from "@repo/shared";
-import { Product } from "./product-model";
 import { prisma } from "../lib/prisma";
 
 export interface OrderItem {

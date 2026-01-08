@@ -19,6 +19,7 @@
     "db-refresh:store": "npm run migrate:store reset && npm run seed:store",
     "lint:blog": "npx eslint apps/blog",
     "lint:store": "npx eslint apps/store",
+    "lint:fix": "npx eslint . --fix",
     "lint": "npx eslint ."
   },
   "keywords": [
