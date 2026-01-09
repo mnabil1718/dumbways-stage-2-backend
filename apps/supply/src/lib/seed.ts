@@ -1,11 +1,21 @@
 import { prisma } from "./prisma";
 
 async function main() {
-        // Clean up (order matters because of relations)
-        // This one empty User table and reset AUTO INCREMENT back to 1
-        await prisma.$executeRaw`TRUNCATE TABLE "User" RESTART IDENTITY CASCADE;`;
+        // ======================
+        // CLEAN UP (ORDER MATTERS)
+        // ======================
+        await prisma.$executeRaw`
+    TRUNCATE TABLE
+      "Stock",
+      "Supplier",
+      "Product",
+      "User"
+    RESTART IDENTITY CASCADE;
+  `;
 
-        // Create users
+        // ======================
+        // USERS
+        // ======================
         await prisma.user.createMany({
                 data: [
                         {
@@ -29,14 +39,78 @@ async function main() {
                 ],
         });
 
+        // ======================
+        // PRODUCTS
+        // ======================
+        const products = await prisma.product.createMany({
+                data: [
+                        { name: "Beras 5kg", sku: "BR-5KG" },
+                        { name: "Gula 1kg", sku: "GL-1KG" },
+                ],
+        });
+
+        // ======================
+        // SUPPLIERS
+        // ======================
+        const suppliers = await prisma.supplier.createMany({
+                data: [
+                        {
+                                name: "Supplier A",
+                                email: "supplierA@example.com",
+                                password: "hashed_supplier_a",
+                        },
+                        {
+                                name: "Supplier B",
+                                email: "supplierB@example.com",
+                                password: "hashed_supplier_b",
+                        },
+                ],
+        });
+
+        // ======================
+        // FETCH IDS (IMPORTANT)
+        // ======================
+        const productList = await prisma.product.findMany();
+        const supplierList = await prisma.supplier.findMany();
+
+        const beras = productList.find(p => p.sku === "BR-5KG")!;
+        const gula = productList.find(p => p.sku === "GL-1KG")!;
+
+        const supplierA = supplierList.find(s => s.email === "supplierA@example.com")!;
+        const supplierB = supplierList.find(s => s.email === "supplierB@example.com")!;
+
+        // ======================
+        // STOCKS
+        // ======================
+        await prisma.stock.createMany({
+                data: [
+                        // Beras
+                        {
+                                productId: beras.id,
+                                supplierId: supplierA.id,
+                                qty: 20,
+                        },
+                        {
+                                productId: beras.id,
+                                supplierId: supplierB.id,
+                                qty: 15,
+                        },
+
+                        // Gula
+                        {
+                                productId: gula.id,
+                                supplierId: supplierA.id,
+                                qty: 30,
+                        },
+                ],
+        });
+
+        console.log("Seeding completed successfully");
 }
 
 main()
-        .then(() => {
-                console.log("Seeding completed data...");
-        })
         .catch((e) => {
-                console.error(e);
+                console.error("Seeding failed:", e);
                 process.exit(1);
         })
         .finally(async () => {
