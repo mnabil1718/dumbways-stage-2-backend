@@ -12,6 +12,6 @@ app.use("/api/v1", appRoutes);
 
 app.use(errorHandler);
 
-app.listen(3000, () => {
-        console.log("Supply App running on port 3000...");
+app.listen(8080, () => {
+        console.log("Supply App running on port 8080...");
 });

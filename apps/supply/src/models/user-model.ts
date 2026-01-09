@@ -7,14 +7,16 @@ export interface User {
         email: string;
         password: string;
         name: string;
+        balance: number;
 }
 
-export type UserResponse = Omit<User, "password">;
+export type UserResponse = Omit<User, "password" | "balance">;
 
 export const CreateUserSchema = z.object({
-        name: z.string().min(1).max(60),
         email: z.email(),
+        name: z.string().min(1).max(60),
         password: z.string().min(6).max(20),
+        balance: z.number().nonnegative().optional(),
 });
 
 export type CreateUser = z.infer<typeof CreateUserSchema>;
@@ -34,11 +36,7 @@ export function mapUserToResponse(origin: User): UserResponse {
 }
 
 export function mapUsersToResponses(arr: User[]): UserResponse[] {
-        return arr.map((usr) => ({
-                id: usr.id,
-                name: usr.name,
-                email: usr.email,
-        }));
+        return arr.map((usr) => mapUserToResponse(usr));
 }
 
 export async function insertUser(data: CreateUser): Promise<UserResponse> {
@@ -47,6 +45,7 @@ export async function insertUser(data: CreateUser): Promise<UserResponse> {
                         name: data.name,
                         email: data.email,
                         password: data.password,
+                        balance: data.balance,
                 },
         });
 
@@ -63,6 +62,7 @@ export async function updateUserById(data: UpdateUser): Promise<UserResponse> {
                         name: data.name,
                         email: data.email,
                         password: data.password,
+                        balance: data.balance,
                 },
         });
 

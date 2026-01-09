@@ -3,4 +3,19 @@ model User {
   email    String @unique
   name     String
   password String
+  balance  Int    @default(0)
+
+  sentTransactions     Transaction[] @relation("SentTransactions")
+  receivedTransactions Transaction[] @relation("ReceivedTransactions")
+}
+
+model Transaction {
+  id        Int      @id @default(autoincrement())
+  fromId    Int
+  toId      Int
+  amount    Int
+  createdAt DateTime @default(now())
+
+  from User @relation("SentTransactions", fields: [fromId], references: [id])
+  to   User @relation("ReceivedTransactions", fields: [toId], references: [id])
 }
