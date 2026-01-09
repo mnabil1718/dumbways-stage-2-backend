@@ -1,0 +1,63 @@
+import { Request, Response } from "express";
+import { hash, ok } from "@repo/shared";
+import { StatusCodes } from "http-status-codes";
+import { checkSupplierIDExists, CreateSupplier, deleteSupplierById, getAllSuppliers, getSupplierById, insertSupplier, mapToResponse, Supplier, updateSupplier, UpdateSupplier } from "../models/supplier-model";
+
+export const postSuppliers = async (req: Request, res: Response) => {
+
+        const { name, email, password } = req.body;
+
+        const hashed = await hash(password);
+
+        const create: CreateSupplier = {
+                name,
+                email,
+                password: hashed,
+        };
+
+        const u = await insertSupplier(create);
+        res.status(StatusCodes.CREATED).json(ok("Supplier created successfully", u));
+}
+
+export const putSuppliers = async (req: Request, res: Response) => {
+        const { id } = req.params;
+        const { name, email, password } = req.body;
+
+        const num_id = Number(id);
+
+        const s: Supplier = await getSupplierById(num_id);
+
+        if (password) {
+                s.password = await hash(password);
+        }
+
+        const update: UpdateSupplier = {
+                id: s.id,
+                name: name ?? s.name,
+                email: email ?? s.email,
+                password: s.password,
+        };
+
+        const updated = await updateSupplier(update);
+        res.status(StatusCodes.OK).json(ok("Supplier updated successfully", updated));
+}
+
+export const getSuppliers = async (req: Request, res: Response) => {
+        const suppliers = await getAllSuppliers();
+        res.status(StatusCodes.OK).json(ok("Suppliers fetched successfully", suppliers));
+}
+
+export const getSuppliersById = async (req: Request, res: Response) => {
+        const { id } = req.params;
+        const s = await getSupplierById(Number(id));
+
+        res.status(StatusCodes.OK).json(ok("Supplier fetched successfully", mapToResponse(s)));
+}
+
+export const deleteSuppliersById = async (req: Request, res: Response) => {
+        const { id } = req.params;
+
+        await checkSupplierIDExists(Number(id));
+        const s = await deleteSupplierById(Number(id));
+        res.status(StatusCodes.OK).json(ok("Supplier deleted successfully", s));
+}
