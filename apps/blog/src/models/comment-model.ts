@@ -1,4 +1,4 @@
-import z from "zod";
+import z, { gte } from "zod";
 import { prisma } from "../lib/prisma";
 import { Prisma } from "../generated/prisma/client";
 import { buildPaginationQuery, calculatePaginationMetadata, NotFoundError, PaginationFilter, PaginationMetadata } from "@repo/shared";
@@ -23,6 +23,11 @@ export interface PaginatedComment {
         metadata: PaginationMetadata;
 }
 
+export interface PaginatedCommentSummary {
+        summaries: CommentSummary[];
+        metadata: PaginationMetadata;
+}
+
 
 
 export type CommentWithRelations = Prisma.CommentGetPayload<{
@@ -34,6 +39,21 @@ export type CommentWithRelations = Prisma.CommentGetPayload<{
 export const includes = {
         user: true,
 } satisfies Prisma.CommentInclude;
+
+type RawCommentSummary = {
+        id: number;
+        title: string;
+        user_name: string;
+        comment_count: number;
+        total_items: number;
+};
+
+export interface CommentSummary {
+        post_id: number;
+        post_title: string;
+        author_name: string;
+        comment_count: number;
+}
 
 
 // CREATE
@@ -55,6 +75,49 @@ export type UpdateComment = z.infer<typeof UpdateCommentSchema> & {
         id: number;
 };
 
+// FILTERS
+
+
+export const CommentFilterSchema = z.object({
+        max_comments: z.coerce.number().nonnegative().optional(),
+        min_comments: z.coerce.number().nonnegative().optional(),
+}).superRefine((data, ctx) => {
+        if (data.min_comments !== undefined && data.max_comments !== undefined && data.min_comments > data.max_comments) {
+                ctx.addIssue({
+                        path: ["max_comments"],
+                        message: "min_comments cannot be greater than max_comments",
+                        code: "custom",
+                });
+        }
+});
+
+
+export type CommentFilter = z.infer<typeof CommentFilterSchema>;
+
+
+// QUERY BUILDERS
+
+
+// can't have empty having, therefore return undefined if no filters provided
+function buildHaving(filter: CommentFilter): undefined | Prisma.CommentScalarWhereWithAggregatesInput {
+
+        if (filter.min_comments === undefined && filter.max_comments === undefined) return;
+
+        const having: Prisma.CommentScalarWhereWithAggregatesInput = {};
+
+        having.postId = {
+                ...(filter.min_comments !== undefined ? { gte: filter.min_comments } : undefined),
+                ...(filter.max_comments !== undefined ? { lte: filter.max_comments } : undefined),
+        };
+
+        return having;
+}
+
+
+
+
+// MAPPERS
+
 
 export function mapCommentToResponse(origin: CommentWithRelations): CommentResponse {
         return {
@@ -68,6 +131,29 @@ export function mapCommentsToResponses(arr: CommentWithRelations[]): CommentResp
         return arr.map((c) => mapCommentToResponse(c));
 }
 
+export function mapSummaryToResponse(raw: RawCommentSummary): CommentSummary {
+        return {
+                post_id: raw.id,
+                post_title: raw.title,
+                author_name: raw.user_name,
+                comment_count: raw.comment_count,
+        };
+}
+
+export function mapSummariesToResponses(arr: RawCommentSummary[]): { summaries: CommentSummary[]; total_items: number; } {
+        if (arr.length < 1) return { summaries: [], total_items: 0 };
+
+        const total_items = arr[0].total_items;
+        const summaries = arr.map(s => mapSummaryToResponse(s));
+
+        return {
+                total_items,
+                summaries,
+        }
+}
+
+
+// QUERIES
 
 export async function insertComment(data: CreateComment): Promise<CommentResponse> {
         const c = await prisma.comment.create({
@@ -143,4 +229,46 @@ export async function getCommentsByPostId(postId: number, pFilter: PaginationFil
                 comments: mapCommentsToResponses(comments),
                 metadata: calculatePaginationMetadata(pFilter, total_items),
         } as PaginatedComment;
+}
+
+
+
+export async function getCommentsGroupByPost(pFilter: PaginationFilter, filter: CommentFilter): Promise<PaginatedCommentSummary> {
+        const { skip, take } = buildPaginationQuery(pFilter);
+
+        const conditions: Prisma.Sql[] = [];
+
+        if (filter.min_comments !== undefined) {
+                conditions.push(Prisma.sql`COUNT(c."postId") >= ${filter.min_comments}`);
+        }
+        if (filter.max_comments !== undefined) {
+                conditions.push(Prisma.sql`COUNT(c."postId") <= ${filter.max_comments}`);
+        }
+
+        // Build dynamic HAVING clause
+        const having = conditions.length > 0 ? Prisma.sql`HAVING ${Prisma.join(conditions, ' AND ')}` : Prisma.sql``;
+
+        const res = await prisma.$queryRaw<
+                RawCommentSummary[]
+        >`
+	  SELECT
+	      p.id,
+	      p.title,
+	      u.name AS user_name,
+	      COUNT(c."postId")::int AS comment_count,
+	      COUNT(*) OVER ()::int AS total_items
+	  FROM "Comment" c
+	  JOIN "Post" p ON c."postId" = p.id
+	  JOIN "User" u ON p."authorId" = u.id
+	  GROUP BY c."postId", p.id, u.id
+	  ${having}
+	  LIMIT ${take} OFFSET ${skip};
+	`;
+
+        const { summaries, total_items } = mapSummariesToResponses(res);
+
+        return {
+                metadata: calculatePaginationMetadata(pFilter, total_items),
+                summaries,
+        }
 }

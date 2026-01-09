@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import { ok, PaginationFilter, PaginationFilterSchema, slugify } from "@repo/shared";
 import { CreatePost, getPostById, insertPost, getAllPosts, getPostBySlug, deletePostById, updatePostById, PostResponse, UpdatePost, checkPostIDExists, PostFilter, PostFilterSchema } from "../models/post-model";
 import { StatusCodes } from "http-status-codes";
-import { getCommentsByPostId } from "../models/comment-model";
+import { CommentFilter, CommentFilterSchema, getCommentsByPostId, getCommentsGroupByPost, PaginatedCommentSummary } from "../models/comment-model";
 
 export const postPosts = async (req: Request, res: Response) => {
 
@@ -79,4 +79,13 @@ export const getPostsComments = async (req: Request, res: Response) => {
 
         const comments = await getCommentsByPostId(postId, pFilter);
         res.status(StatusCodes.OK).json(ok("Comments fetched successfully", comments));
+}
+
+
+export const getPostsCommentSummary = async (req: Request, res: Response) => {
+        const filter: CommentFilter = CommentFilterSchema.parse(req.query);
+        const pFilter: PaginationFilter = PaginationFilterSchema.parse(req.query);
+
+        const summaries: PaginatedCommentSummary = await getCommentsGroupByPost(pFilter, filter);
+        res.status(StatusCodes.OK).json(ok("Comment summaries fetched successfully", summaries))
 }
