@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { hash, ok } from "@repo/shared";
 import { StatusCodes } from "http-status-codes";
 import { checkSupplierIDExists, CreateSupplier, deleteSupplierById, getAllSuppliers, getSupplierById, insertSupplier, mapToResponse, Supplier, updateSupplier, UpdateSupplier } from "../models/supplier-model";
+import { updateSupplierStock } from "../models/stock-model";
 
 export const postSuppliers = async (req: Request, res: Response) => {
 
@@ -60,4 +61,10 @@ export const deleteSuppliersById = async (req: Request, res: Response) => {
         await checkSupplierIDExists(Number(id));
         const s = await deleteSupplierById(Number(id));
         res.status(StatusCodes.OK).json(ok("Supplier deleted successfully", s));
+}
+
+
+export const batchUpdateSuppliersStock = async (req: Request, res: Response) => {
+        const update = await updateSupplierStock(req.body);
+        res.status(StatusCodes.OK).json(ok("Stocks update successfully", update));
 }

@@ -1,6 +1,7 @@
 import z from "zod";
 import { prisma } from "../lib/prisma";
-import { NotFoundError } from "@repo/shared";
+import { InvariantError, NotFoundError } from "@repo/shared";
+import { TransactionClient } from "../generated/prisma/internal/prismaNamespace";
 
 export interface Supplier {
         id: number;
@@ -98,4 +99,22 @@ export async function checkSupplierIDExists(id: number): Promise<void> {
         });
 
         if (!p) throw new NotFoundError("Supplier not found");
+}
+
+// needs to be inside transaction
+export async function checkSupplierIDsExists(tx: TransactionClient, ids: number[]): Promise<void> {
+        const suppliers = await tx.supplier.findMany({
+                where: {
+                        id: {
+                                in: ids,
+                        },
+                },
+        });
+
+        const founds: Set<number> = new Set(suppliers.map((s) => s.id));
+        const missings = ids.filter((id) => !founds.has(id));
+
+        if (missings.length > 0) {
+                throw new NotFoundError(`following supplier ids are not found: ${missings.join(', ')}`);
+        }
 }
