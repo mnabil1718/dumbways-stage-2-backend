@@ -1,6 +1,6 @@
 import z from "zod";
 import { prisma } from "../lib/prisma";
-import { NotFoundError } from "@repo/shared";
+import { AuthenticationError, NotFoundError } from "@repo/shared";
 import { USER_ROLE } from "../generated/prisma/enums"
 
 export interface User {
@@ -102,15 +102,15 @@ export async function getUserById(id: number): Promise<UserResponse> {
         return mapUserToResponse(u);
 }
 
-export async function getUserByEmail(email: string): Promise<UserResponse> {
+export async function getUserByEmail(email: string): Promise<User> {
         const u = await prisma.user.findUnique({
                 where: {
                         email,
                 },
         });
 
-        if (!u) throw new NotFoundError("User not found");
-        return mapUserToResponse(u);
+        if (!u) throw new AuthenticationError("invalid credentials");
+        return u;
 }
 
 

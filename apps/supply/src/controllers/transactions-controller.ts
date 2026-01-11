@@ -7,8 +7,9 @@ import { CreateTransaction, insertTransaction } from "../models/transaction-mode
 export const postTransaction = async (req: Request, res: Response) => {
 
         const { amount, toId } = req.body;
+        const { sub } = (req as any).user;
 
-        const fromId = 1; // dummy, from JWT later
+        const fromId = Number(sub);
 
         if (fromId === toId) {
                 throw new InvariantError("Cannot transfer points to yourself");

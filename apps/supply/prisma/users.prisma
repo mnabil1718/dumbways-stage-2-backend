@@ -1,13 +1,14 @@
 model User {
-  id       Int    @id @default(autoincrement())
-  email    String @unique
+  id       Int       @id @default(autoincrement())
+  email    String    @unique
   name     String
   password String
-  balance  Int    @default(0)
-  role     USER_ROLE   @default(USER)
+  balance  Int       @default(0)
+  role     USER_ROLE @default(USER)
 
   sentTransactions     Transaction[] @relation("SentTransactions")
   receivedTransactions Transaction[] @relation("ReceivedTransactions")
+  tokens               Token[]
 }
 
 model Transaction {

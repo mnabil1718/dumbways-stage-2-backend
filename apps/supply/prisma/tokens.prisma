@@ -1,0 +1,12 @@
+model Token {
+  id        Int         @id @default(autoincrement())
+  userId    Int
+  token     String
+  scope     TOKEN_SCOPE
+  expiresAt DateTime
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+enum TOKEN_SCOPE {
+  RESET
+}
