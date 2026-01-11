@@ -1,3 +1,4 @@
+import { USER_ROLE } from "../generated/prisma/enums";
 import { prisma } from "./prisma";
 
 async function main() {
@@ -23,18 +24,21 @@ async function main() {
                                 name: "Alice Johnson",
                                 password: "hashed_password_alice",
                                 balance: 100,
+                                role: USER_ROLE.ADMIN,
                         },
                         {
                                 email: "bob@example.com",
                                 name: "Bob Smith",
                                 password: "hashed_password_bob",
                                 balance: 50,
+                                role: USER_ROLE.USER,
                         },
                         {
                                 email: "charlie@example.com",
                                 name: "Charlie Brown",
                                 password: "hashed_password_charlie",
                                 balance: 370,
+                                role: USER_ROLE.USER,
                         },
                 ],
         });

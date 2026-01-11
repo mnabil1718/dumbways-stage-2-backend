@@ -1,6 +1,7 @@
 import z from "zod";
 import { prisma } from "../lib/prisma";
 import { NotFoundError } from "@repo/shared";
+import { USER_ROLE } from "../generated/prisma/enums"
 
 export interface User {
         id: number;
@@ -8,6 +9,7 @@ export interface User {
         password: string;
         name: string;
         balance: number;
+        role: USER_ROLE;
 }
 
 export type UserResponse = Omit<User, "password" | "balance">;
@@ -17,6 +19,7 @@ export const CreateUserSchema = z.object({
         name: z.string().min(1).max(60),
         password: z.string().min(6).max(20),
         balance: z.number().nonnegative().optional(),
+        role: z.enum(USER_ROLE)
 });
 
 export type CreateUser = z.infer<typeof CreateUserSchema>;
@@ -32,6 +35,7 @@ export function mapUserToResponse(origin: User): UserResponse {
                 id: origin.id,
                 name: origin.name,
                 email: origin.email,
+                role: origin.role,
         };
 }
 
@@ -46,6 +50,7 @@ export async function insertUser(data: CreateUser): Promise<UserResponse> {
                         email: data.email,
                         password: data.password,
                         balance: data.balance,
+                        role: data.role,
                 },
         });
 
@@ -63,6 +68,7 @@ export async function updateUserById(data: UpdateUser): Promise<UserResponse> {
                         email: data.email,
                         password: data.password,
                         balance: data.balance,
+                        role: data.role,
                 },
         });
 

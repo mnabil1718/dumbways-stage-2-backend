@@ -5,7 +5,7 @@ import { StatusCodes } from "http-status-codes";
 
 export const postUsers = async (req: Request, res: Response) => {
 
-        const { name, email, password, balance } = req.body;
+        const { name, email, password, balance, role } = req.body;
 
         const hashed = await hash(password);
 
@@ -14,6 +14,7 @@ export const postUsers = async (req: Request, res: Response) => {
                 email,
                 password: hashed,
                 balance: balance ?? 0,
+                role,
         };
 
         const u = await insertUser(create);
@@ -22,7 +23,7 @@ export const postUsers = async (req: Request, res: Response) => {
 
 export const putUsers = async (req: Request, res: Response) => {
         const { id } = req.params;
-        const { name, email, password, balance } = req.body;
+        const { name, email, password, balance, role } = req.body;
 
         const num_id = Number(id);
 
@@ -38,6 +39,7 @@ export const putUsers = async (req: Request, res: Response) => {
                 email: email ?? u.email,
                 password: u.password,
                 balance: balance ?? u.balance,
+                role: role ?? u.role,
         };
 
         const updatedUser = await updateUserById(update);

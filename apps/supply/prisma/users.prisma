@@ -4,6 +4,7 @@ model User {
   name     String
   password String
   balance  Int    @default(0)
+  role     USER_ROLE   @default(USER)
 
   sentTransactions     Transaction[] @relation("SentTransactions")
   receivedTransactions Transaction[] @relation("ReceivedTransactions")
@@ -18,4 +19,9 @@ model Transaction {
 
   from User @relation("SentTransactions", fields: [fromId], references: [id])
   to   User @relation("ReceivedTransactions", fields: [toId], references: [id])
+}
+
+enum USER_ROLE {
+  USER
+  ADMIN
 }
