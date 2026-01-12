@@ -2,6 +2,7 @@ import multer from "multer";
 import path from "path";
 import crypto from "node:crypto";
 import { InvariantError } from "@repo/shared";
+import { sanitize } from "../utils/sanitize";
 
 // allowed file types
 const IMAGE_MIME_TYPES = [
@@ -15,11 +16,11 @@ const IMAGE_MIME_TYPES = [
 const storage = multer.diskStorage({
         destination: "src/public/uploads",
         filename: function (req, file, callback) {
-                const name_split = file.originalname.split(".");
                 const ext = path.extname(file.originalname); // .png, .jpg, etc
                 const base = path.basename(file.originalname, ext);
+                const safeBase = sanitize(base);
                 const id = crypto.randomBytes(6).toString("base64url");
-                const filename = `${id}-${base}${ext}`;
+                const filename = `${id}-${safeBase}${ext}`;
                 callback(null, filename);
         },
 });

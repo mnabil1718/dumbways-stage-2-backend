@@ -7,7 +7,7 @@ import { singleImageUploadMiddleware } from "../middlewares/upload";
 
 const router = Router();
 router.post("/", validate(CreateProductSchema), postProducts);
-router.post("/upload-image", singleImageUploadMiddleware, postProductsImage);
+router.post("/:id/upload-image", singleImageUploadMiddleware, postProductsImage);
 router.put("/:id", validate(UpdateProductSchema), authenticate, authorizeAdmin, putProducts);
 router.get("/", getProducts);
 router.get("/:id", getProductsById);

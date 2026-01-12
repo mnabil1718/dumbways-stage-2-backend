@@ -1,6 +1,6 @@
 import z from "zod";
 import { prisma } from "../lib/prisma";
-import { NotFoundError } from "@repo/shared";
+import { InvariantError, NotFoundError } from "@repo/shared";
 
 export interface Product {
         id: number;
@@ -90,7 +90,10 @@ export async function checkProductIDExists(id: number): Promise<void> {
 }
 
 
-export async function updateProductImageById(id: number, imageUrl: string): Promise<Product> {
+export async function updateProductImageById(id: number, imageUrl?: string): Promise<Product> {
+
+        if (!imageUrl) throw new Error("image url is undefined");
+
         return await prisma.product.update({
                 where: {
                         id,

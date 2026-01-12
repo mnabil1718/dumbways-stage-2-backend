@@ -1,7 +1,7 @@
 import { ok } from "@repo/shared";
 import { Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
-import { checkProductIDExists, deleteProductById, getAllProducts, getProductById, insertProduct, updateProduct, UpdateProduct } from "../models/product-model";
+import { checkProductIDExists, deleteProductById, getAllProducts, getProductById, insertProduct, Product, updateProduct, UpdateProduct, updateProductImageById } from "../models/product-model";
 
 export const postProducts = async (req: Request, res: Response) => {
         const p = await insertProduct(req.body);
@@ -48,5 +48,15 @@ export const deleteProductsById = async (req: Request, res: Response) => {
 }
 
 export const postProductsImage = async (req: Request, res: Response) => {
-        console.log(req.file);
+        const { id } = req.params;
+
+        await checkProductIDExists(Number(id));
+
+        const image = req.file;
+
+        const p: Product = await updateProductImageById(Number(id), image?.filename ?? undefined);
+
+        res.status(StatusCodes.OK).json(ok("Product image uploaded successfully", p));
+
+
 }
