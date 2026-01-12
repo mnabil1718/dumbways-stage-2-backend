@@ -17,3 +17,4 @@ export const loginSuppliers = async (req: Request, res: Response) => {
 
         res.status(StatusCodes.OK).json(ok("Supplier logged in successfully.", { accessToken }));
 }
+

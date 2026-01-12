@@ -4,5 +4,7 @@ model Product {
   sku       String   @unique
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  price     Float
+  imageUrl  String?
   stocks    Stock[]
 }

@@ -6,6 +6,7 @@ export interface Product {
         id: number;
         name: string;
         sku: string;
+        price: number;
         createdAt: Date;
         updatedAt: Date;
 }
@@ -16,6 +17,7 @@ export interface Product {
 export const CreateProductSchema = z.object({
         name: z.string().min(3),
         sku: z.string().min(3),
+        price: z.number().nonnegative(),
 });
 
 export type CreateProduct = z.infer<typeof CreateProductSchema>;
@@ -28,13 +30,12 @@ export const UpdateProductSchema = CreateProductSchema.partial();
 export type UpdateProduct = z.infer<typeof UpdateProductSchema> & { id: number; };
 
 
-
-
 export async function insertProduct(data: CreateProduct): Promise<Product> {
         return await prisma.product.create({
                 data: {
                         name: data.name,
                         sku: data.sku,
+                        price: data.price,
                 },
         });
 }
@@ -47,6 +48,7 @@ export async function updateProduct(data: UpdateProduct): Promise<Product> {
                 data: {
                         name: data.name,
                         sku: data.sku,
+                        price: data.price,
                         updatedAt: new Date(),
                 },
         });
@@ -85,4 +87,16 @@ export async function checkProductIDExists(id: number): Promise<void> {
         });
 
         if (!p) throw new NotFoundError("Product not found");
+}
+
+
+export async function updateProductImageById(id: number, imageUrl: string): Promise<Product> {
+        return await prisma.product.update({
+                where: {
+                        id,
+                },
+                data: {
+                        imageUrl,
+                },
+        });
 }

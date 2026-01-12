@@ -2,8 +2,13 @@ import express from "express";
 import appRoutes from "./routes/index-routes";
 import bodyParser from "body-parser";
 import { errorHandler } from "./middlewares/error";
+import { corsMiddleware } from "./middlewares/cors";
+import { limiterMiddleware } from "./middlewares/rate-limit";
 
 const app = express();
+
+app.use(corsMiddleware);
+app.use(limiterMiddleware);
 
 app.use(bodyParser.urlencoded());
 app.use(bodyParser.json());

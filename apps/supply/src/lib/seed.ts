@@ -49,8 +49,8 @@ async function main() {
         // ======================
         const products = await prisma.product.createMany({
                 data: [
-                        { name: "Beras 5kg", sku: "BR-5KG" },
-                        { name: "Gula 1kg", sku: "GL-1KG" },
+                        { name: "Beras 5kg", sku: "BR-5KG", price: 50000 },
+                        { name: "Gula 1kg", sku: "GL-1KG", price: 80000 },
                 ],
         });
 
