@@ -1,3 +1,4 @@
+import { NotFoundError } from "@repo/shared";
 import { TOKEN_SCOPE } from "../generated/prisma/enums";
 import { prisma } from "../lib/prisma";
 
@@ -20,4 +21,20 @@ export async function insertToken(data: CreateToken): Promise<Token> {
                         expiresAt: data.expiresAt,
                 },
         });
+}
+
+export async function getToken(hashedToken: string, scope: TOKEN_SCOPE): Promise<Token> {
+        const t = await prisma.token.findFirst({
+                where: {
+                        token: hashedToken,
+                        scope,
+                        expiresAt: {
+                                gt: new Date(),
+                        },
+                },
+        });
+
+        if (!t) throw new NotFoundError("token not found");
+
+        return t;
 }

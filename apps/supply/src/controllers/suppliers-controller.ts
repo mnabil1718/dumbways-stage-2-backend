@@ -7,7 +7,7 @@ import { getProductById } from "../models/product-model";
 
 export const postSuppliers = async (req: Request, res: Response) => {
 
-        const { name, email, password } = req.body;
+        const { name, email, password, role } = req.body;
 
         const hashed = await hash(password);
 
@@ -15,6 +15,7 @@ export const postSuppliers = async (req: Request, res: Response) => {
                 name,
                 email,
                 password: hashed,
+                role,
         };
 
         const u = await insertSupplier(create);
@@ -23,7 +24,7 @@ export const postSuppliers = async (req: Request, res: Response) => {
 
 export const putSuppliers = async (req: Request, res: Response) => {
         const { id } = req.params;
-        const { name, email, password } = req.body;
+        const { name, email, password, role } = req.body;
 
         const num_id = Number(id);
 
@@ -38,6 +39,7 @@ export const putSuppliers = async (req: Request, res: Response) => {
                 name: name ?? s.name,
                 email: email ?? s.email,
                 password: s.password,
+                role: role ?? s.role,
         };
 
         const updated = await updateSupplier(update);

@@ -1,7 +1,7 @@
 import z from "zod";
 import { prisma } from "../lib/prisma";
 import { AuthenticationError, NotFoundError } from "@repo/shared";
-import { USER_ROLE } from "../generated/prisma/enums"
+import { ROLE } from "../generated/prisma/enums"
 
 export interface User {
         id: number;
@@ -9,7 +9,7 @@ export interface User {
         password: string;
         name: string;
         balance: number;
-        role: USER_ROLE;
+        role: ROLE;
 }
 
 export type UserResponse = Omit<User, "password" | "balance">;
@@ -19,7 +19,7 @@ export const CreateUserSchema = z.object({
         name: z.string().min(1).max(60),
         password: z.string().min(6).max(20),
         balance: z.number().nonnegative().optional(),
-        role: z.enum(USER_ROLE)
+        role: z.enum(ROLE),
 });
 
 export type CreateUser = z.infer<typeof CreateUserSchema>;
@@ -135,4 +135,13 @@ export async function deleteUserById(id: number): Promise<UserResponse> {
         return mapUserToResponse(u);
 }
 
-
+export async function updateUserPasswordById(id: number, hashedPassword: string): Promise<void> {
+        await prisma.user.update({
+                where: {
+                        id,
+                },
+                data: {
+                        password: hashedPassword
+                },
+        });
+}

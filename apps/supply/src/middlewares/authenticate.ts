@@ -1,6 +1,7 @@
-import { AuthenticationError, JwtPayload, verifyJWT } from "@repo/shared";
+import { AuthenticationError, AuthorizationError, JwtPayload, verifyJWT } from "@repo/shared";
 import { NextFunction, Request, Response } from "express";
 import { JWT_SECRET } from "../utils/tokenize";
+import { ROLE } from "../generated/prisma/enums";
 
 export const authenticate = async (req: Request, res: Response, next: NextFunction) => {
         const auth_header = req.headers.authorization;
@@ -12,6 +13,16 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
 
         const payload: JwtPayload = await verifyJWT(jwt, JWT_SECRET);
 
-        (req as any).user = payload;
+        // for both supplier and user
+        (req as any).user = { id: Number(payload.sub), role: payload.role };
+        next();
+}
+
+export const authorizeAdmin = async (req: Request, res: Response, next: NextFunction) => {
+
+        const { role } = (req as any).user;
+
+        if (role !== ROLE.ADMIN) throw new AuthorizationError("you are not autorized to perform this action");
+
         next();
         }

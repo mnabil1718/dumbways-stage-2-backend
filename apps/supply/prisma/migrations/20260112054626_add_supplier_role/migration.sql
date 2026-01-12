@@ -1,0 +1,5 @@
+-- CreateEnum
+CREATE TYPE "SUPPLIER_ROLE" AS ENUM ('USER', 'ADMIN');
+
+-- AlterTable
+ALTER TABLE "Supplier" ADD COLUMN     "role" "SUPPLIER_ROLE" NOT NULL DEFAULT 'USER';

@@ -2,18 +2,21 @@ import z from "zod";
 import { prisma } from "../lib/prisma";
 import { InvariantError, NotFoundError } from "@repo/shared";
 import { TransactionClient } from "../generated/prisma/internal/prismaNamespace";
+import { ROLE } from "../generated/prisma/enums";
 
 export interface Supplier {
         id: number;
         name: string;
         email: string;
         password: string;
+        role: ROLE;
 }
 
 export const CreateSupplierSchema = z.object({
         name: z.string().min(1),
         email: z.email(),
         password: z.string().min(4).max(12),
+        role: z.enum(ROLE),
 });
 
 export type CreateSupplier = z.infer<typeof CreateSupplierSchema>;
@@ -29,6 +32,7 @@ export function mapToResponse(origin: Supplier): SupplierResponse {
                 id: origin.id,
                 name: origin.name,
                 email: origin.email,
+                role: origin.role,
         };
 }
 
@@ -42,6 +46,7 @@ export async function insertSupplier(data: CreateSupplier): Promise<SupplierResp
                         name: data.name,
                         email: data.email,
                         password: data.password,
+                        role: data.role,
                 },
         });
 
@@ -57,6 +62,7 @@ export async function updateSupplier(data: UpdateSupplier): Promise<SupplierResp
                         name: data.name,
                         email: data.email,
                         password: data.password,
+                        role: data.role,
                 },
         });
 
@@ -80,6 +86,17 @@ export async function getSupplierById(id: number): Promise<Supplier> {
         return s;
 };
 
+
+export async function getSupplierByEmail(email: string): Promise<Supplier> {
+        const s = await prisma.supplier.findUnique({
+                where: {
+                        email,
+                },
+        });
+
+        if (!s) throw new NotFoundError("invalid credentials");
+        return s;
+};
 
 export async function deleteSupplierById(id: number): Promise<SupplierResponse> {
         const s = await prisma.supplier.delete({

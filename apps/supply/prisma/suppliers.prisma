@@ -3,5 +3,6 @@ model Supplier {
   name     String
   email    String  @unique
   password String
+  role     ROLE    @default(USER)
   stocks   Stock[]
 }
