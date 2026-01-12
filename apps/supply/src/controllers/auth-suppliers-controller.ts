@@ -18,3 +18,19 @@ export const loginSuppliers = async (req: Request, res: Response) => {
         res.status(StatusCodes.OK).json(ok("Supplier logged in successfully.", { accessToken }));
 }
 
+
+export const loginSessionSuppliers = async (req: Request, res: Response) => {
+        const { email, password } = req.body;
+
+        const s: Supplier = await getSupplierByEmail(email);
+        const ok_password = await compare(password, s.password);
+        if (!ok_password) throw new AuthenticationError("invalid credentials");
+
+        (req.session as any).user = {
+                id: s.id,
+                role: s.role,
+        };
+
+        res.status(StatusCodes.OK).json(ok("Supplier logged in successfully."));
+}
+
