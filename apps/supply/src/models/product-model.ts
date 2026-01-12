@@ -14,8 +14,8 @@ export interface Product {
 
 
 export const CreateProductSchema = z.object({
-        name: z.string().min(1),
-        sku: z.string().min(1),
+        name: z.string().min(3),
+        sku: z.string().min(3),
 });
 
 export type CreateProduct = z.infer<typeof CreateProductSchema>;

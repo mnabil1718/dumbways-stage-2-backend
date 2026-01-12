@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import { hash, ok } from "@repo/shared";
 import { StatusCodes } from "http-status-codes";
 import { checkSupplierIDExists, CreateSupplier, deleteSupplierById, getAllSuppliers, getSupplierById, insertSupplier, mapToResponse, Supplier, updateSupplier, UpdateSupplier } from "../models/supplier-model";
-import { updateSupplierStock } from "../models/stock-model";
+import { getProductsBySupplierID, updateSupplierStock } from "../models/stock-model";
 import { getProductById } from "../models/product-model";
 
 export const postSuppliers = async (req: Request, res: Response) => {
@@ -71,4 +71,11 @@ export const batchUpdateSuppliersStock = async (req: Request, res: Response) => 
         await getProductById(req.body.productId);
         const update = await updateSupplierStock(req.body);
         res.status(StatusCodes.OK).json(ok("Stocks update successfully", update));
+}
+
+export const getSuppliersProducts = async (req: Request, res: Response) => {
+
+        const { sub } = (req as any).user;
+
+        await getProductsBySupplierID(Number(sub));
 }

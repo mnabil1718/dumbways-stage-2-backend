@@ -2,6 +2,15 @@ import z from "zod";
 import { prisma } from "../lib/prisma";
 import { checkSupplierIDsExists } from "./supplier-model";
 import { Prisma } from "../generated/prisma/client";
+import { Product } from "./product-model";
+
+
+export interface StocksWithProducts {
+        id: number;
+        supplierId: number;
+        productId: number;
+
+}
 
 export const UpdateStockItemSchema = z.object({
         supplierId: z.int().gt(0),
@@ -31,6 +40,8 @@ export const UpdateStockSchema = z.object({
 
 export type UpdateStock = z.infer<typeof UpdateStockSchema>;
 
+
+
 export async function updateSupplierStock(data: UpdateStock): Promise<UpdateStock> {
 
         const ids: number[] = data.updates.map(i => i.supplierId);
@@ -58,4 +69,19 @@ export async function updateSupplierStock(data: UpdateStock): Promise<UpdateStoc
         });
 
         return data;
-} 
+}
+
+
+export async function getProductsBySupplierID(supplierId: number): Promise<void> {
+        const stocks = await prisma.stock.findMany({
+                where: {
+                        supplierId,
+                },
+                include: {
+                        product: true,
+                },
+        });
+
+        console.log(stocks);
+
+}

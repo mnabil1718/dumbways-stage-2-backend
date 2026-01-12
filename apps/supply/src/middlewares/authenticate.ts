@@ -14,7 +14,7 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
         const payload: JwtPayload = await verifyJWT(jwt, JWT_SECRET);
 
         // for both supplier and user
-        (req as any).user = { id: Number(payload.sub), role: payload.role };
+        (req as any).user = payload;
         next();
 }
 
@@ -22,7 +22,7 @@ export const authorizeAdmin = async (req: Request, res: Response, next: NextFunc
 
         const { role } = (req as any).user;
 
-        if (role !== ROLE.ADMIN) throw new AuthorizationError("you are not autorized to perform this action");
+        if (role !== ROLE.ADMIN) throw new AuthorizationError("you are not authorized to perform this action");
 
         next();
         }

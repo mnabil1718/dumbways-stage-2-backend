@@ -10,7 +10,8 @@ async function main() {
       "Stock",
       "Supplier",
       "Product",
-      "User"
+      "User",
+      "Stock"
     RESTART IDENTITY CASCADE;
   `;
 
@@ -72,6 +73,7 @@ async function main() {
                         },
                 ],
         });
+
 
         // ======================
         // FETCH IDS (IMPORTANT)
