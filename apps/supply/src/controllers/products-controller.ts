@@ -11,7 +11,6 @@ export const postProducts = async (req: Request, res: Response) => {
 export const putProducts = async (req: Request, res: Response) => {
         const { id } = req.params;
         const { name, sku, price } = req.body;
-
         const num_id = Number(id);
 
         await checkProductIDExists(num_id);
@@ -51,9 +50,7 @@ export const postProductsImage = async (req: Request, res: Response) => {
         const { id } = req.params;
 
         await checkProductIDExists(Number(id));
-
         const image = req.file;
-
         const p: Product = await updateProductImageById(Number(id), image?.filename ?? undefined);
 
         res.status(StatusCodes.OK).json(ok("Product image uploaded successfully", p));
