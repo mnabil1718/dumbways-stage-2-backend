@@ -9,12 +9,29 @@ export interface StocksWithProducts {
         id: number;
         supplierId: number;
         productId: number;
-
 }
 
 export const UpdateStockItemSchema = z.object({
         supplierId: z.int().gt(0),
         qty: z.int().nonnegative(),
+});
+
+
+type ProductWithStock = ({
+        product: {
+                id: number;
+                name: string;
+                sku: string;
+                createdAt: Date;
+                updatedAt: Date;
+                price: number;
+                imageUrl: string | null;
+        };
+} & {
+        id: number;
+        productId: number;
+        supplierId: number;
+        qty: number;
 });
 
 export const UpdateStockSchema = z.object({
@@ -40,7 +57,20 @@ export const UpdateStockSchema = z.object({
 
 export type UpdateStock = z.infer<typeof UpdateStockSchema>;
 
+export function mapProductWithStockToProduct(origin: ProductWithStock): Product {
+        return {
+                id: origin.product.id,
+                name: origin.product.name,
+                price: origin.product.price,
+                sku: origin.product.sku,
+                createdAt: origin.product.createdAt,
+                updatedAt: origin.product.updatedAt,
+        };
+}
 
+export function mapProductsWithStockToProducts(arr: ProductWithStock[]): Product[] {
+        return arr.map(i => mapProductWithStockToProduct(i));
+}
 
 export async function updateSupplierStock(data: UpdateStock): Promise<UpdateStock> {
 
@@ -72,8 +102,10 @@ export async function updateSupplierStock(data: UpdateStock): Promise<UpdateStoc
 }
 
 
-export async function getProductsBySupplierID(supplierId: number): Promise<void> {
-        const stocks = await prisma.stock.findMany({
+
+
+export async function getProductsBySupplierID(supplierId: number): Promise<Product[]> {
+        const stocks: ProductWithStock[] = await prisma.stock.findMany({
                 where: {
                         supplierId,
                 },
@@ -82,6 +114,5 @@ export async function getProductsBySupplierID(supplierId: number): Promise<void>
                 },
         });
 
-        console.log(stocks);
-
+        return mapProductsWithStockToProducts(stocks);
 }

@@ -77,5 +77,7 @@ export const getSuppliersProducts = async (req: Request, res: Response) => {
 
         const { sub } = (req as any).user;
 
-        await getProductsBySupplierID(Number(sub));
+        const products = await getProductsBySupplierID(Number(sub));
+
+        res.status(StatusCodes.OK).json(ok("Supplier products fetched", products));
 }
